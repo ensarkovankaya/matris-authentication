@@ -1,6 +1,6 @@
 import * as http from 'http';
-import Server from "./server";
 import "reflect-metadata";  // Required for Typedi
+import Server from "./server";
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = process.env.HOST || '0.0.0.0';

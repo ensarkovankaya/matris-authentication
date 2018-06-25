@@ -7,7 +7,7 @@ export enum Role {
 }
 
 export interface IAccountModel {
-    id: string;
-    username: string;
-    role: Role
+    _id: string;
+    email: string;
+    role: Role;
 }

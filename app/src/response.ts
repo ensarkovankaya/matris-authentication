@@ -1,12 +1,21 @@
 import { Response } from "express";
-import { IAPIError } from './graphql/error';
-import { IAPIResponse, IValidationError } from "./models/response.model";
-import { IHttpResponse } from './services/http.service';
+import { Location } from "express-validator/check/location";
+
+export interface IValidationError {
+    location: Location;
+    param: string;
+    msg: string;
+}
+
+export interface IAPIResponse<T> {
+    data?: T;
+    errors?: IValidationError[];
+}
 
 export class BaseResponse implements IAPIResponse<any> {
-    public data: any;
+    public data?: any;
     public status: number;
-    public errors: IValidationError[] | null;
+    public errors?: IValidationError[];
     private response: Response;
 
     constructor(res: Response) {
