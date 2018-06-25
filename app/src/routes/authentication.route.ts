@@ -3,6 +3,7 @@ import { checkSchema, validationResult } from 'express-validator/check';
 import { matchedData } from 'express-validator/filter';
 import { sign } from 'jsonwebtoken';
 import { Container, Service } from 'typedi';
+import { IAccountModel } from '../models/account.model';
 import { ErrorResponse, IValidationError, ServerErrorResponse, SuccessResponse } from '../response';
 import { UserService } from '../services/user.service';
 
@@ -21,12 +22,12 @@ class AuthenticationRoute {
         }
     }
 
-    private static sign(user: { _id: string, email: string, role: string }) {
+    private static sign(user: IAccountModel) {
         const secret = process.env.SECRET;
         if (!secret) {
             throw new Error('SecretNotFound');
         }
-        return sign(user, secret);
+        return sign({id: user._id, email: user.email, role: user.role}, secret);
     }
 
     public router: Router;
