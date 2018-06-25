@@ -20,9 +20,11 @@ interface IAPIResponse<T> {
 export class APIValidationError extends Error {
 
     public name = 'APIValidationError';
+    public errors: GraphQLError[];
 
-    constructor() {
+    constructor(errors: GraphQLError[]) {
         super();
+        this.errors = errors;
     }
 }
 
@@ -44,14 +46,14 @@ export class APIResponse<T> implements IAPIResponse<T> {
     public hasError(name: string, raise: boolean = false): boolean {
         const hasError = this.errors ? this.errors.filter(e => e.message === name).length > 0 : false;
         if (hasError && raise) {
-            throw new APIValidationError();
+            throw new APIValidationError(this.errors);
         }
         return hasError;
     }
 
     public raise() {
         if (this.hasErrors()) {
-            throw new APIValidationError();
+            throw new APIValidationError(this.errors);
         }
     }
 }
@@ -80,17 +82,17 @@ export class UserService {
         client.setHeader('Accept', 'application/json');
     }
 
-    public async getUser(by: { id: string } | { email: string } | { username: string }):
+    public async getUserByEmail(email: string):
         Promise<IAccountModel | null> {
         try {
-            const query = `query getUser($id: String, $email: String, $username: String) {
-                    user: get(id: id, email: $email, username: $username) {
+            const query = `query getUser($email: String!) {
+                    user: get(email: $email) {
                         _id
                         email,
                         role
                     }
             }`;
-            const response = await this.call<{ user: IAccountModel | null }>(query, by);
+            const response = await this.call<{ user: IAccountModel | null }>(query, {email});
             response.raise();
             return response.data.user;
         } catch (err) {

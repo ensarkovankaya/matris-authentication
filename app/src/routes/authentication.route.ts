@@ -39,7 +39,7 @@ class AuthenticationRoute {
     public async authenticate(req: Request, res: Response) {
         try {
             const data = matchedData(req, {locations: ['body']}) as { email: string, password: string };
-            const user = await this.us.getUser({email: data.email});
+            const user = await this.us.getUserByEmail(data.email);
             if (!user) {
                 return new ErrorResponse(res, [{
                     msg: 'UserNotFound',
