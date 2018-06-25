@@ -65,7 +65,7 @@ class AuthenticationRoute {
     }
 
     private routes() {
-        this.router.post('/authenticate',
+        this.router.post('/authorize',
             checkSchema({
                 email: {
                     in: ['body'],
