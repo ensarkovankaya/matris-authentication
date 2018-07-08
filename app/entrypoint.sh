@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+mkdir -p logs # Create logs folder if not exits
+
 install () {
     # Install Dependencies
     if [ "$NODE_ENV" == "development" ] || [ "$NODE_ENV" == "dev" ]; then
@@ -13,6 +15,7 @@ install () {
 if [ "$1" == "bash" ]; then
     /usr/bin/env bash
 elif [ "$1" == "test" ]; then
+    NODE_ENV=test
     npm run test
 elif [ "$1" == "install" ]; then
     install

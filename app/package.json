@@ -24,12 +24,13 @@
     "express-validator": "^5.2.0",
     "graphql-request": "^1.6.0",
     "helmet": "^3.12.1",
+    "jsonwebtoken": "^8.3.0",
     "mongoose": "^5.1.5",
     "morgan": "^1.9.0",
     "reflect-metadata": "^0.1.12",
     "ts-node": "^7.0.0",
     "typedi": "^0.7.3",
-    "jsonwebtoken": "^8.3.0"
+    "winston": "^3.0.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.4",

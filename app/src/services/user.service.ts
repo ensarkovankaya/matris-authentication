@@ -1,6 +1,7 @@
 import { GraphQLClient } from "graphql-request";
 import { ClientError, GraphQLError, Options, Variables } from 'graphql-request/dist/src/types';
 import { Service } from "typedi";
+import { Logger } from '../logger';
 import { IAccountModel } from '../models/account.model';
 
 export interface IGraphQLClient {
@@ -77,13 +78,16 @@ export class UserService {
         throw err;
     }
 
+    private logger: Logger;
+
     constructor(private client: Partial<IGraphQLClient> = new GraphQLClient(process.env.USER_SERVICE_ENDPOINT)) {
+        this.logger = new Logger('UserService');
         client.setHeader('Content-Type', 'application/json');
         client.setHeader('Accept', 'application/json');
     }
 
-    public async getUserByEmail(email: string):
-        Promise<IAccountModel | null> {
+    public async getUserByEmail(email: string): Promise<IAccountModel | null> {
+        this.logger.debug('GetUserByEmail', {email});
         try {
             const query = `query getUser($email: String!) {
                     user: get(email: $email) {
@@ -93,38 +97,41 @@ export class UserService {
                     }
             }`;
             const response = await this.call<{ user: IAccountModel | null }>(query, {email});
+            this.logger.debug('GetUserByEmail', {response});
             response.raise();
             return response.data.user;
         } catch (err) {
-            console.error('UserService:GetUser', err);
+            this.logger.error('GetUserByEmail', err);
             throw err;
         }
     }
 
     public async isPasswordValid(email: string, password: string) {
+        this.logger.debug('IsPasswordValid', {email, password});
         try {
             const query = `query isPasswordValid($email: String!, $password: String!) {
                     valid: password(email: $email, password: $password)
             }`;
             const response = await this.call<{ valid: boolean }>(query, {email, password});
+            this.logger.debug('IsPasswordValid', {response});
             if (response.hasErrors()) {
                 return false;
             }
             return response.data.valid;
         } catch (err) {
-            console.error('UserService:IsPasswordValid', err);
+            this.logger.error('IsPasswordValid', err);
             throw err;
         }
     }
 
-    private async call<T>(query: string, variables?: { [key: string]: any }):
-        Promise<APIResponse<T>> {
+    private async call<T>(query: string, variables?: { [key: string]: any }): Promise<APIResponse<T>> {
+        this.logger.debug('Call', {query, variables});
         try {
             return await this.client.request<T>(query, variables)
                 .then(data => UserService.handleResponse<T>(data))
                 .catch(err => UserService.handleError<T>(err));
         } catch (err) {
-            console.error('UserService:Call', err);
+            this.logger.error('Call', err);
             throw err;
         }
     }
