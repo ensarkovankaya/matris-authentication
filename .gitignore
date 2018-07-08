@@ -2,3 +2,4 @@
 .idea/
 app/node_modules/
 app/build/
+app/logs/*.log
