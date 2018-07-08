@@ -6,7 +6,7 @@
   "author": "Ensar Kovankaya <ensar@kovankaya.com>",
   "license": "ISC",
   "scripts": {
-    "test": "mocha -r ts-node/register src/**/*.spec.ts",
+    "test": "mocha -b -r ts-node/register test/**/*.spec.ts test/**/**/*.spec.ts test/**/**/**/*.spec.ts",
     "lint": "tslint -p tslint.json",
     "ts": "tsc",
     "check": "npm run lint",
