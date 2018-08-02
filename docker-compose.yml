@@ -2,13 +2,13 @@ version: '2'
 
 services:
   app:
-    image: node:9.11.2-jessie
+    build: ./app
     env_file: .env
-    working_dir: /home/node/app
-    restart: always
-    user: "node"
     volumes:
       - ./app:/home/node/app
-    entrypoint: /home/node/app/entrypoint.sh
+    ports:
+      - "3000:3000"
+    entrypoint:
+      /home/node/app/entrypoint.sh
     ports:
       - "3001:3001"

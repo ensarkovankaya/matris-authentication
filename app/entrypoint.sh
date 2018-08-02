@@ -20,7 +20,6 @@ elif [ "$1" == "test" ]; then
 elif [ "$1" == "install" ]; then
     install
 else
-    install
     # If environment development use nodemon to watch file changes
     # Otherwise just run the server
     if [ "$NODE_ENV" == "development" ]; then
