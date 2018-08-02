@@ -1,60 +1,127 @@
-import { NextFunction, Request, Response, Router } from 'express';
-import { checkSchema, validationResult } from 'express-validator/check';
-import { matchedData } from 'express-validator/filter';
+import { Request, Response, Router } from 'express';
 import { sign } from 'jsonwebtoken';
+import { AccountService } from 'matris-account-api';
+import { Logger } from 'matris-logger/dist/logger';
 import { Service } from 'typedi';
-import { Logger } from '../logger';
-import { IAccountModel } from '../models/account.model';
-import { ErrorResponse, IValidationError, ServerErrorResponse, SuccessResponse } from '../response';
-import { UserService } from '../services/user.service';
+import { EndpointUndefined, SecretUndefined } from '../errors';
+import { rootLogger } from '../logger';
+import { Role } from '../models/role.model';
+import {
+    InvalidPasswordResponse,
+    ServerErrorResponse,
+    SuccessResponse,
+    UserNotActiveResponse,
+    UserNotFoundResponse
+} from '../response';
+import { RequestValidator } from '../validator';
 
 @Service()
 export class AuthenticationRoute {
 
     public router: Router;
     private logger: Logger;
+    private secret: string;
 
-    constructor(private us: UserService) {
-        this.logger = new Logger('AuthenticationRoute', ['route']);
+    constructor(private ac: AccountService, private vl: RequestValidator) {
+        this.logger = rootLogger.getLogger('AuthenticationRoute', ['route']);
         this.router = Router({caseSensitive: true});
+        this.configure();
         this.routes();
     }
 
-    public async authenticate(req: Request, res: Response) {
+    public configure() {
+        // Configure Account Service
+        const endpoint = process.env.ACCOUNT_SERVICE;
+        if (!endpoint) {
+            throw new EndpointUndefined();
+        }
+        this.ac.configure({url: endpoint});
+
+        // Check secret
+        this.secret = process.env.SECRET;
+        if (!this.secret) {
+            throw new SecretUndefined();
+        }
+    }
+
+    /**
+     * Authenticate user with email and password
+     * @param {Request} req
+     * @param {Response} res
+     */
+    public async password(req: Request, res: Response) {
+        // Get data from request
+        let data;
         try {
-            const data = matchedData(req, {locations: ['body']}) as { email: string, password: string };
-            this.logger.debug('Authenticate', {data});
-            const user = await this.us.getUserByEmail(data.email);
-            this.logger.debug('Authenticate', {user});
-            if (!user) {
-                return new ErrorResponse(res, [{
-                    msg: 'UserNotFound',
-                    location: 'body',
-                    param: 'email'
-                }]).send();
-            }
-            const valid = await this.us.isPasswordValid(data.email, data.password);
-            this.logger.debug('Authenticate', {valid});
-            if (!valid) {
-                return new ErrorResponse(res, [{
-                    msg: 'InvalidPassword',
-                    location: 'body',
-                    param: 'password'
-                }]).send();
-            }
-            const token = this.sign(user);
-            this.logger.debug('Authenticate', {token});
-            return new SuccessResponse(res, token).send();
-        } catch (err) {
-            this.logger.error('Authenticate', err);
+            data = this.vl.data<{ email: string, password: string }>(req, ['body']);
+            this.logger.debug('Data extracted from request.', {data});
+        } catch (e) {
+            this.logger.error('Authenticate', e);
             return new ServerErrorResponse(res).send();
+        }
+
+        // Get user from AccountService
+        let user;
+        try {
+            user = await this.ac.get({email: data.email}, ['_id', 'email', 'role', 'active']);
+            this.logger.debug('User recived.', {user});
+        } catch (e) {
+            this.logger.error('Getting user from AccountService failed.', e);
+            return new ServerErrorResponse(res).send();
+        }
+
+        // Check user exists and active
+        if (!user) {
+            return new UserNotFoundResponse(res).send();
+        } else if (!user.active) {
+            return new UserNotActiveResponse(res).send();
+        }
+
+        let valid = false;
+        try {
+            // Check is password valid
+            valid = await this.ac.password(data.email, data.password);
+            this.logger.debug('Password validated.', {valid});
+        } catch (e) {
+            this.logger.error('Checking password failed.', e);
+            return new ServerErrorResponse(res).send();
+        }
+
+        // If password not valid return InvalidPasswordResponse
+        if (!valid) {
+            return new InvalidPasswordResponse(res).send();
+        }
+        try {
+            // Sign
+            const token = this.sign(user.id, user.email, user.role);
+            this.logger.debug('User data signed.', {token});
+            return new SuccessResponse(res, token).send();
+        } catch (e) {
+            this.logger.error('Signing user data failed.', e);
+            return new ServerErrorResponse(res).send();
+        }
+    }
+
+    /**
+     * Sign user and returns jwt.
+     * @param {string} id User unique id
+     * @param {string} email User email
+     * @param {Role} role User role
+     */
+    public sign(id: string, email: string, role: Role) {
+        this.logger.debug('Sign', {id, email, role});
+        try {
+            return sign({id, email, role}, this.secret);
+        } catch (err) {
+            this.logger.error('Sign', err);
+            throw err;
         }
     }
 
     private routes() {
         try {
-            this.router.post('/authorize',
-                checkSchema({
+            this.router.post('/password',
+                this.vl.schema({
                     email: {
                         in: ['body'],
                         errorMessage: 'InvalidEmail',
@@ -66,44 +133,17 @@ export class AuthenticationRoute {
                             errorMessage: 'InvalidLength',
                             options: {
                                 min: 8,
-                                max: 32
+                                max: 40
                             }
                         }
                     }
                 }),
-                this.validate.bind(this),
-                this.authenticate.bind(this));
+                this.vl.validate.bind(this.vl),
+                this.password.bind(this)
+            );
         } catch (err) {
             this.logger.error('Route configuration failed.', err);
             throw err;
-        }
-    }
-
-    private sign(user: IAccountModel) {
-        this.logger.debug('Sign', user);
-        try {
-            const secret = process.env.SECRET;
-            if (!secret) {
-                throw new Error('SecretNotFound');
-            }
-            return sign({id: user._id, email: user.email, role: user.role}, secret);
-        } catch (err) {
-            this.logger.error('Sign', err);
-            throw err;
-        }
-    }
-
-    private validate(req: Request, res: Response, next: NextFunction) {
-        try {
-            const errors = validationResult(req);
-            if (!errors.isEmpty()) {
-                this.logger.warn('Validate', {validationErrors: errors.array()});
-                return new ErrorResponse(res, errors.array() as IValidationError[]).send();
-            }
-            return next();
-        } catch (err) {
-            this.logger.error('Validate', err);
-            return new ServerErrorResponse(res).send();
         }
     }
 }

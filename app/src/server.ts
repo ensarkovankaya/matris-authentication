@@ -7,8 +7,8 @@ import * as helmet from "helmet";
 import * as morgan from "morgan";
 import "reflect-metadata";
 import { Container } from 'typedi';
-import { Logger } from './logger';
-
+import { Logger } from "../node_modules/matris-logger";
+import { rootLogger } from './logger';
 import { AuthenticationRoute } from './routes/authentication.route';
 
 class Server {
@@ -16,7 +16,7 @@ class Server {
     private logger: Logger;
 
     constructor() {
-        this.logger = new Logger('Server');
+        this.logger = rootLogger.getLogger('Server');
         this.app = express();
         this.config();
         this.routes();
@@ -45,17 +45,7 @@ class Server {
 
             // Http Log
             this.app.use((req, res, next) => {
-                this.logger.http('Incoming Request', {
-                    params: req.params,
-                    query: req.query,
-                    headers: req.headers,
-                    body: req.body,
-                    baseUrl: req.baseUrl,
-                    originalUrl: req.originalUrl,
-                    httpVersion: req.httpVersion,
-                    url: req.url,
-                    method: req.method
-                });
+                this.logger.http('Incoming Request', req);
                 next();
             });
         } catch (err) {

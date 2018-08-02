@@ -60,3 +60,33 @@ export class ServerErrorResponse extends BaseResponse {
         this.status = 500;
     }
 }
+
+export class UserNotFoundResponse extends ErrorResponse {
+    constructor(res: Response, param: string = 'email', location: Location = 'body') {
+        super(res, [{
+            msg: 'UserNotFound',
+            location,
+            param
+        }]);
+    }
+}
+
+export class UserNotActiveResponse extends ErrorResponse {
+    constructor(res: Response, param: string = 'email', location: Location = 'body') {
+        super(res, [{
+            msg: 'UserNotActive',
+            location,
+            param
+        }]);
+    }
+}
+
+export class InvalidPasswordResponse extends ErrorResponse {
+    constructor(res: Response, param: string = 'password', location: Location = 'body') {
+        super(res, [{
+            msg: 'InvalidPassword',
+            location,
+            param
+        }]);
+    }
+}
