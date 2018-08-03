@@ -11,7 +11,7 @@ import { Logger } from "../node_modules/matris-logger";
 import { rootLogger } from './logger';
 import { AuthenticationRoute } from './routes/authentication.route';
 
-class Server {
+export class Server {
     public app: express.Application;
     private logger: Logger;
 
@@ -57,12 +57,10 @@ class Server {
     // application routes
     public routes(): void {
         try {
-            this.app.use('/', Container.get<AuthenticationRoute>(AuthenticationRoute).router);
+            this.app.use('/v1/', Container.get<AuthenticationRoute>(AuthenticationRoute).router);
         } catch (err) {
             this.logger.error('Route configuration failed', err);
             throw err;
         }
     }
 }
-
-export default new Server().app;
