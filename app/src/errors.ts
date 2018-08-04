@@ -5,3 +5,7 @@ export class EnvironmentError extends Error {
         super(`Environment variable '${variable}' required.`);
     }
 }
+
+export class InvalidData extends Error {
+    public name = 'InvalidData';
+}
