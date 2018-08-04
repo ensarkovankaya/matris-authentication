@@ -4,6 +4,7 @@ import { Logger } from 'matris-logger/dist/logger';
 import { Service } from 'typedi';
 import { EnvironmentError, InvalidData } from '../errors';
 import { rootLogger } from '../logger';
+import { IDecodedTokenModel } from '../models/decoded.token.model';
 import {
     InvalidPasswordResponse,
     ServerErrorResponse,
@@ -141,7 +142,7 @@ export class AuthenticationRoute {
 
         try {
             // Decode Token
-            const decoded = await this.jwt.verify(data.token);
+            const decoded = await this.jwt.verify<IDecodedTokenModel>(data.token);
             this.logger.debug('Token decoded.', {decoded});
             return new SuccessResponse(res, decoded).send();
         } catch (e) {
