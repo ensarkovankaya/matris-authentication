@@ -1,9 +1,7 @@
-export class SecretUndefined extends Error {
-    public name = 'SecretUndefined';
-    public message = 'SecretUndefined';
-}
+export class EnvironmentError extends Error {
+    public name = 'EnvironmentError';
 
-export class EndpointUndefined extends Error {
-    public name = 'EndpointUndefined';
-    public message = 'EndpointUndefined';
+    constructor(public variable?: string) {
+        super(`Environment variable '${variable}' required.`);
+    }
 }
