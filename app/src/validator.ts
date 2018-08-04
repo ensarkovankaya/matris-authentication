@@ -23,14 +23,15 @@ export class RequestValidator {
      */
     public validate(req: Request, res: Response, next: NextFunction) {
         try {
+            this.logger.debug('Validating request');
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                this.logger.warn('Validate', {validationErrors: errors.array()});
+                this.logger.warn('Validation return errors', {validationErrors: errors.array()});
                 return new ErrorResponse(res, errors.array() as IValidationError[]).send();
             }
             return next();
         } catch (err) {
-            this.logger.error('Validate', err);
+            this.logger.error('Validation failed', err);
             return new ServerErrorResponse(res).send();
         }
     }
