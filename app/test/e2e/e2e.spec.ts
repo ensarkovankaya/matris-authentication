@@ -3,12 +3,13 @@ import { createServer, Server as HttpServer } from 'http';
 import { after, before, describe, it } from 'mocha';
 import "reflect-metadata";
 import { Server } from '../../src/server';
-import { DataSource } from '../data/data';
+import { TokenDataSource } from '../data/tokens/token';
+import { Database } from '../data/valid/database';
 import { IDBUserModel } from '../data/valid/db.model';
 import { HttpClient } from './http.client';
 
-const PATH = __dirname + '/../data/valid/db.json';
-const DATA = new DataSource<IDBUserModel>().load(PATH);
+const DATABASE = new Database();
+const TOKENS = new TokenDataSource();
 
 let server: HttpServer;
 
@@ -34,19 +35,24 @@ before('Load Data', async () => {
 describe('E2E', () => {
     describe('Password', () => {
         it('should return token', async () => {
-            const users = DATA.multiple(10, (d: IDBUserModel) => d.active === true && d.deleted === false);
-            for (const user of users) {
-                const response = await client.password<{data: string}>({email: user.email, password: user.email});
-                expect(response.status).to.be.eq(200);
-                expect(response.data).to.be.an('object');
-                expect(response.data).to.have.key('data');
-                expect(response.data.data).to.be.a('string');
-                expect(response.data.data.length).to.be.gte(200);
+            try {
+                const users = DATABASE.multiple(10, (d: IDBUserModel) => d.active === true && d.deleted === false);
+                for (const user of users) {
+                    const response = await client.password<{data: string}>({email: user.email, password: user.email});
+                    expect(response.status).to.be.eq(200);
+                    expect(response.data).to.be.an('object');
+                    expect(response.data).to.have.key('data');
+                    expect(response.data.data).to.be.a('string');
+                    expect(response.data.data.length).to.be.gte(150);
+                }
+            } catch (e) {
+                console.error(e);
+                throw e;
             }
         }).timeout(4000);
 
         it('should return UserNotFound', async () => {
-            const users = DATA.multiple(10, (d: IDBUserModel) => d.deleted === true)
+            const users = DATABASE.multiple(10, (d: IDBUserModel) => d.deleted === true)
                 .concat([{email: 'mail@mail.com', password: '12345678'}] as any);
             for (const user of users) {
                 try {
@@ -65,7 +71,7 @@ describe('E2E', () => {
         }).timeout(4000);
 
         it('should return UserNotActive', async () => {
-            const users = DATA.multiple(10, (d: IDBUserModel) => d.active === false && d.deleted === false);
+            const users = DATABASE.multiple(10, (d: IDBUserModel) => d.active === false && d.deleted === false);
             for (const user of users) {
                 try {
                     await client.password<{data: string}>({email: user.email, password: user.email});
@@ -83,7 +89,7 @@ describe('E2E', () => {
         }).timeout(4000);
 
         it('should return InvalidPasswordResponse', async () => {
-            const users = DATA.multiple(10, (d: IDBUserModel) => d.active === true && d.deleted === false);
+            const users = DATABASE.multiple(10, (d: IDBUserModel) => d.active === true && d.deleted === false);
             for (const user of users) {
                 try {
                     await client.password<{data: string}>({email: user.email, password: '12345678'});
@@ -101,6 +107,90 @@ describe('E2E', () => {
                 }
             }
         }).timeout(4000);
+    });
+
+    describe('Validate', () => {
+
+        it('should return decoded tokens', async () => {
+            // Get valid tokens from source
+            const tokens = TOKENS.multiple(20, t => t.type === 'valid');
+            const secret = process.env.JWT_SECRET;
+
+            for (const data of tokens) {
+                if (secret !== data.secret) {
+                    throw new Error(`Secrets not matched. Expected: "${data.secret}" Actual: "${secret}"`);
+                }
+                const response = await client.validate<{data: {
+                    id: string;
+                    email: string;
+                    role: string;
+                    iat: number;
+                    exp: number
+                }}>({token: data.token});
+                expect(response.status).to.be.eq(200);
+                expect(response.data).to.be.an('object');
+                expect(response.data).to.have.key('data');
+                expect(response.data.data).to.be.an('object');
+                expect(response.data.data).to.have.keys(['id', 'email', 'role', 'iat', 'exp']);
+
+                expect(response.data.data.id).to.be.a('string');
+                expect(response.data.data.id).to.be.eq(data.id);
+
+                expect(response.data.data.email).to.be.a('string');
+                expect(response.data.data.email).to.be.eq(data.email);
+
+                expect(response.data.data.role).to.be.a('string');
+                expect(response.data.data.role).to.be.eq(data.role);
+
+                expect(response.data.data.iat).to.be.a('number');
+                expect(response.data.data.iat).to.be.eq(data.iat);
+
+                expect(response.data.data.exp).to.be.a('number');
+                expect(response.data.data.exp).to.be.eq(data.exp);
+            }
+        });
+
+        it('should response with token expired', async () => {
+            // Get valid tokens from source
+            const tokens = TOKENS.multiple(20, t => t.type === 'expired');
+            const secret = process.env.JWT_SECRET;
+
+            for (const data of tokens) {
+                try {
+                    if (secret !== data.secret) {
+                        throw new Error(`Secrets not matched. Expected: "${data.secret}" Actual: "${secret}"`);
+                    }
+                    await client.validate({token: data.token});
+                } catch (e) {
+                    expect(e.name).to.be.eq('HttpClientError');
+                    expect(e.status).to.be.eq(400);
+                    expect(e.data).to.be.an('object');
+                    expect(e.data).to.have.keys(['errors', 'data']);
+                    expect(e.data.data).to.be.eq(null);
+                    expect(e.data.errors).to.be.an('array');
+                    expect(e.data.errors).to.be.deep.eq([{ msg: 'TokenExpired', location: 'body', param: 'token' }]);
+                }
+            }
+        });
+
+        it('should response with invalid token', async () => {
+            // Get valid tokens from source
+            const tokens = TOKENS.multiple(20, t => t.type === 'invalid');
+
+            for (const data of tokens) {
+                try {
+                    await client.validate({token: data.token});
+                } catch (e) {
+                    expect(e.name).to.be.eq('HttpClientError');
+                    expect(e.status).to.be.eq(400);
+                    expect(e.data).to.be.an('object');
+                    expect(e.data).to.have.keys(['errors', 'data']);
+                    expect(e.data.data).to.be.eq(null);
+                    expect(e.data.errors).to.be.an('array');
+                    expect(e.data.errors).to.be.deep.eq([{ msg: 'InvalidToken', location: 'body', param: 'token' }]);
+                }
+            }
+        });
     });
 });
 
