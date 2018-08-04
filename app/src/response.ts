@@ -90,3 +90,23 @@ export class InvalidPasswordResponse extends ErrorResponse {
         }]);
     }
 }
+
+export class TokenExpiredResponse extends ErrorResponse {
+    constructor(res: Response, param: string = 'token', location: Location = 'body') {
+        super(res, [{
+            msg: 'TokenExpiredResponse',
+            location,
+            param
+        }]);
+    }
+}
+
+export class InvalidTokenResponse extends ErrorResponse {
+    constructor(res: Response, param: string = 'token', location: Location = 'body') {
+        super(res, [{
+            msg: 'InvalidTokenResponse',
+            location,
+            param
+        }]);
+    }
+}
