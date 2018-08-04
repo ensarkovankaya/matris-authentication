@@ -24,6 +24,9 @@ const INVALID_DATA: IDataModel[] = JSON.parse(readFileSync(INVALID_PATH, {encodi
 const EXPIRED_PATH = __dirname + '/expired.json';
 const EXPIRED_DATA: IDataModel[] = JSON.parse(readFileSync(EXPIRED_PATH, {encoding: 'utf8'}));
 
+/**
+ * Data source which have tokens loaded
+ */
 export class TokenDataSource extends DataSource<ITokenModel> {
     constructor() {
         super();
