@@ -12,11 +12,33 @@ export class DataSource<T> {
     }
 
     /**
-     * Loads data from file
-     * @param path: File path
+     * Loads source from file and appends current data
+     * @param {string} path: File path
+     * @param {boolean} reset: Reset data source before loading new source
      */
-    public load(path: string): this {
-        this.data = JSON.parse(readFileSync(path, {encoding: 'utf8'}));
+    public load(path: string, reset: boolean = false): this {
+        const data = JSON.parse(readFileSync(path, {encoding: 'utf8'}));
+        if (reset) {
+            this.reset();
+        }
+        this.append(data);
+        return this;
+    }
+
+    /**
+     * Appends given data to data source
+     * @param {T[]} data: Data
+     */
+    public append(data: T[]): this {
+        this.data = this.data.concat(data);
+        return this;
+    }
+
+    /**
+     * Reset current data source
+     */
+    public reset(): this {
+        this.data = [];
         return this;
     }
 
