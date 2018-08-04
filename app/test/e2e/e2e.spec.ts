@@ -109,7 +109,7 @@ describe('E2E', () => {
         }).timeout(4000);
     });
 
-    describe('Validate', () => {
+    describe('Verify', () => {
 
         it('should return decoded tokens', async () => {
             // Get valid tokens from source
@@ -120,7 +120,7 @@ describe('E2E', () => {
                 if (secret !== data.secret) {
                     throw new Error(`Secrets not matched. Expected: "${data.secret}" Actual: "${secret}"`);
                 }
-                const response = await client.validate<{data: {
+                const response = await client.verify<{data: {
                     id: string;
                     email: string;
                     role: string;
@@ -160,7 +160,7 @@ describe('E2E', () => {
                     if (secret !== data.secret) {
                         throw new Error(`Secrets not matched. Expected: "${data.secret}" Actual: "${secret}"`);
                     }
-                    await client.validate({token: data.token});
+                    await client.verify({token: data.token});
                 } catch (e) {
                     expect(e.name).to.be.eq('HttpClientError');
                     expect(e.status).to.be.eq(400);
@@ -179,7 +179,7 @@ describe('E2E', () => {
 
             for (const data of tokens) {
                 try {
-                    await client.validate({token: data.token});
+                    await client.verify({token: data.token});
                 } catch (e) {
                     expect(e.name).to.be.eq('HttpClientError');
                     expect(e.status).to.be.eq(400);

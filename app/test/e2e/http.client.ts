@@ -44,7 +44,7 @@ export class HttpClient {
         return this.post<T>('password', data);
     }
 
-    public validate<T>(data: any) {
+    public verify<T>(data: any) {
         return this.post<T>('verify', data);
     }
 
