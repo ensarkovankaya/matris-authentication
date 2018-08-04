@@ -2,7 +2,7 @@ import { Request, Response, Router } from 'express';
 import { AccountService } from 'matris-account-api';
 import { Logger } from 'matris-logger/dist/logger';
 import { Service } from 'typedi';
-import { EnvironmentError } from '../errors';
+import { EnvironmentError, InvalidData } from '../errors';
 import { rootLogger } from '../logger';
 import {
     InvalidPasswordResponse,
@@ -65,6 +65,9 @@ export class AuthenticationRoute {
         try {
             data = this.vl.data<{ email: string, password: string, expiresIn?: number }>(req, ['body']);
             this.logger.debug('Data extracted from request.', {data});
+            if (!data || !data.email || !data.password) {
+                throw new InvalidData();
+            }
         } catch (e) {
             this.logger.error('Data extraction from request failed', e);
             return new ServerErrorResponse(res).send();
@@ -127,6 +130,10 @@ export class AuthenticationRoute {
         try {
             data = this.vl.data<{ token: string }>(req, ['body']);
             this.logger.debug('Data extracted from request.', {data});
+
+            if (!data || !data.token) {
+                throw new InvalidData();
+            }
         } catch (e) {
             this.logger.error('Data extraction from request failed', e);
             return new ServerErrorResponse(res).send();
