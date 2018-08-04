@@ -61,9 +61,9 @@ export class AuthenticationRoute {
      */
     public async password(req: Request, res: Response) {
         // Get data from request
-        let data: { email: string, password: string };
+        let data: { email: string, password: string, expiresIn?: number };
         try {
-            data = this.vl.data<{ email: string, password: string }>(req, ['body']);
+            data = this.vl.data<{ email: string, password: string, expiresIn?: number }>(req, ['body']);
             this.logger.debug('Data extracted from request.', {data});
         } catch (e) {
             this.logger.error('Data extraction from request failed', e);
@@ -104,7 +104,8 @@ export class AuthenticationRoute {
 
         try {
             // Sign
-            const token = await this.jwt.sign({id: user.id, email: user.email, role: user.role});
+            const options = data.expiresIn !== undefined ? {expiresIn: data.expiresIn} : {};
+            const token = await this.jwt.sign({id: user.id, email: user.email, role: user.role}, options);
             this.logger.debug('User data signed.', {token});
             return new SuccessResponse(res, token).send();
         } catch (e) {
@@ -167,6 +168,17 @@ export class AuthenticationRoute {
                                 max: 40
                             }
                         }
+                    },
+                    expiresIn: {
+                        in: ['body'],
+                        optional: {},
+                        isNumeric: {
+                            options: {
+                                min: 0,
+                                max: 60 * 60 * 24 * 30 // 1 month
+                            }
+                        },
+                        toInt: {}
                     }
                 }),
                 this.vl.validate.bind(this.vl),

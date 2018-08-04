@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import { verify } from 'jsonwebtoken';
 import { describe, it } from 'mocha';
 import "reflect-metadata";
 import { JWTService } from '../../../src/services/jwt.service';

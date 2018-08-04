@@ -372,17 +372,19 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }], data: null});
         });
 
-        it('should return SuccessResponse', async () => {
+        it('should call "sign" method from JWTService', async () => {
             class MockJWTServices {
                 public data: any;
+                public overwrites: any;
 
                 public configure() {
                     // Configure
                 }
 
-                public sign(data) {
+                public sign(data, overwrites) {
                     this.data = data;
-                    throw new MethodCalled('sign', data);
+                    this.overwrites = overwrites;
+                    throw new MethodCalled('sign', {data, overwrites});
                 }
             }
             class MockAccountService extends BaseAccountService {
@@ -409,6 +411,57 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             expect(jwt.data).to.be.an('object');
             expect(jwt.data).to.have.keys(['id', 'email', 'role']);
             expect(jwt.data).to.be.deep.eq({id: '1'.repeat(24), email: 'mail@mail.com', role: 'ADMIN'});
+
+            expect(jwt.overwrites).to.be.an('object');
+            expect(jwt.overwrites).to.be.deep.eq({});
+        });
+
+        it('should call "sign" method from JWTService with overwrites', async () => {
+            class MockJWTServices {
+                public data: any;
+                public overwrites: any;
+
+                public configure() {
+                    // Configure
+                }
+
+                public sign(data, overwrites) {
+                    this.data = data;
+                    this.overwrites = overwrites;
+                    throw new MethodCalled('sign', {data, overwrites});
+                }
+            }
+            class MockAccountService extends BaseAccountService {
+                public get(by: any, fields: any) {
+                    return {id: '1'.repeat(24), email: 'mail@mail.com', active: true, role: 'ADMIN'};
+                }
+
+                public password() {
+                    return true;
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const service = new MockAccountService();
+            const validator = new BaseRequestValidator({
+                email: 'mail@mail.com',
+                password: '12345678',
+                expiresIn: 60 * 60
+            });
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
+
+            const response = new MockResponse();
+            await route.password({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(500);
+
+            expect(jwt.data).to.be.an('object');
+            expect(jwt.data).to.have.keys(['id', 'email', 'role']);
+            expect(jwt.data).to.be.deep.eq({id: '1'.repeat(24), email: 'mail@mail.com', role: 'ADMIN'});
+
+            expect(jwt.overwrites).to.be.an('object');
+            expect(jwt.overwrites).to.be.deep.eq({expiresIn: 3600});
         });
 
         it('should return SuccessResponse', async () => {

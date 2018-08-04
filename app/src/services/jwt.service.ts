@@ -3,8 +3,11 @@ import { Logger } from "matris-logger";
 import { Service } from 'typedi';
 import { rootLogger } from '../logger';
 
-export interface IJWTOptions {
+export interface IOptionOverwrites {
     expiresIn?: number | string;
+}
+
+export interface IJWTOptions extends IOptionOverwrites {
     secret?: string;
 }
 
@@ -35,11 +38,11 @@ export class JWTService {
      * @param {object} payload User unique id
      * @returns {Promise<string>}: token
      */
-    public async sign(payload: object): Promise<string> {
+    public async sign(payload: object, overwrites: IOptionOverwrites = {}): Promise<string> {
         this.logger.debug('Sign', {payload});
         try {
             return await new Promise<string>((resolve, reject) => {
-                const options = {expiresIn: this.expiresIn};
+                const options = {expiresIn: this.expiresIn, ...overwrites};
                 sign(payload, this.secret, options, (err, token) => err ? reject(err) : resolve(token));
             });
         } catch (e) {
