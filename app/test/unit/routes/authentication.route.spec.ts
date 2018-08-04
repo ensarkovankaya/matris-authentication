@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import { sign } from 'jsonwebtoken';
 import { describe, it } from 'mocha';
 import "reflect-metadata";
 import { AuthenticationRoute } from '../../../src/routes/authentication.route';
@@ -497,6 +496,182 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             expect(response._data).to.be.an('object');
             expect(response._data).to.have.key('data');
             expect(response._data.data).to.be.eq('jwt-token');
+        });
+    });
+
+    describe('Validate', () => {
+        it('should call "data" method from RequestValidator', async () => {
+
+            class MockJWTServices {
+                public configure() {
+                    // Configure
+                }
+            }
+
+            class MockRequestValidator extends BaseRequestValidator {
+                public data(req, location, onlyValidData: boolean = true, includeOptionals: boolean = true) {
+                    this._data = {req, location, onlyValidData, includeOptionals};
+                    throw new MethodCalled('data', this._data);
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const validator = new MockRequestValidator();
+            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any, jwt as any);
+            const response = new MockResponse();
+            await route.validate({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(500);
+
+            expect(validator._data).to.be.an('object');
+            expect(validator._data).to.have.keys(['req', 'location', 'onlyValidData', 'includeOptionals']);
+            expect(validator._data.location).to.be.deep.eq(['body']);
+            expect(validator._data.onlyValidData).to.be.eq(true);
+            expect(validator._data.includeOptionals).to.be.eq(true);
+        });
+
+        it('should raise InvalidData', async () => {
+
+            class MockJWTServices {
+                public token: string;
+
+                public configure() {
+                    // Configure
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const validator = new BaseRequestValidator(null);
+            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any, jwt as any);
+            const response = new MockResponse();
+            await route.validate({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(500);
+        });
+
+        it('should call "verify" method from JWTService', async () => {
+
+            class MockJWTServices {
+                public token: string;
+
+                public configure() {
+                    // Configure
+                }
+
+                public verify(token) {
+                    this.token = token;
+                    throw new MethodCalled('verify', token);
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const validator = new BaseRequestValidator({token: 'jwt-token'});
+            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any, jwt as any);
+            const response = new MockResponse();
+            await route.validate({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(500);
+
+            expect(jwt.token).to.be.a('string');
+            expect(jwt.token).to.be.eq('jwt-token');
+        });
+
+        it('should return TokenExpiredResponse', async () => {
+
+            class MockJWTServices {
+                public token: string;
+
+                public configure() {
+                    // Configure
+                }
+
+                public verify() {
+                    class TokenExpiredError extends Error {
+                        public name = 'TokenExpiredError';
+                    }
+                    throw new TokenExpiredError();
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const validator = new BaseRequestValidator({token: 'jwt-token'});
+            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any, jwt as any);
+            const response = new MockResponse();
+            await route.validate({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(400);
+            expect(response._data).to.be.deep.eq({
+                errors: [{
+                    msg: 'TokenExpired',
+                    location: 'body',
+                    param: 'token'
+                }],
+                data: null
+            });
+        });
+
+        it('should return InvalidTokenResponse', async () => {
+
+            class MockJWTServices {
+                public token: string;
+
+                public configure() {
+                    // Configure
+                }
+
+                public verify() {
+                    class JsonWebTokenError extends Error {
+                        public name = 'JsonWebTokenError';
+                    }
+                    throw new JsonWebTokenError();
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const validator = new BaseRequestValidator({token: 'jwt-token'});
+            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any, jwt as any);
+            const response = new MockResponse();
+            await route.validate({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(400);
+            expect(response._data).to.be.deep.eq({
+                errors: [{
+                    msg: 'InvalidToken',
+                    location: 'body',
+                    param: 'token'
+                }],
+                data: null
+            });
+        });
+
+        it('should return SuccessResponse', async () => {
+
+            class MockJWTServices {
+                public token: string;
+
+                public configure() {
+                    // Configure
+                }
+
+                public verify() {
+                    return {id: '12345', email: 'mail@mail.com', role: 'ADMIN'};
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const validator = new BaseRequestValidator({token: 'jwt-token'});
+            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any, jwt as any);
+            const response = new MockResponse();
+            await route.validate({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(200);
+            expect(response._data).to.be.deep.eq({data: {id: '12345', email: 'mail@mail.com', role: 'ADMIN'}});
         });
     });
 });
