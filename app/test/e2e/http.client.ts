@@ -44,6 +44,10 @@ export class HttpClient {
         return this.post<T>('password', data);
     }
 
+    public validate<T>(data: any) {
+        return this.post<T>('verify', data);
+    }
+
     private async post<T>(url: string, data?: any): Promise<AxiosResponse<T>> {
         try {
             this.logger.debug('Post', {url, data});
