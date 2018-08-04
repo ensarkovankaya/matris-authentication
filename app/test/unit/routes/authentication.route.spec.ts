@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { sign } from 'jsonwebtoken';
 import { describe, it } from 'mocha';
 import "reflect-metadata";
 import { AuthenticationRoute } from '../../../src/routes/authentication.route';
@@ -109,7 +110,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         const validator = new BaseRequestValidator();
 
         try {
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, {} as any);
             throw new ShouldNotSucceed();
         } catch (e) {
             expect(e.name).to.be.eq('MethodCalled');
@@ -136,18 +137,19 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         const validator = new BaseRequestValidator();
 
         try {
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, {} as any);
             throw new ShouldNotSucceed();
         } catch (e) {
-            expect(e.name).to.be.eq('EndpointUndefined');
+            expect(e.name).to.be.eq('EnvironmentError');
+            expect(e.variable).to.be.eq('ACCOUNT_SERVICE');
         }
 
         process.env.ACCOUNT_SERVICE = endpoint;
     });
 
     it('should raise SecretUndefined', () => {
-        const endpoint = process.env.SECRET;
-        process.env.SECRET = '';
+        const endpoint = process.env.JWT_SECRET;
+        process.env.JWT_SECRET = '';
 
         class MockAccountService {
             private options: any;
@@ -161,17 +163,24 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         const validator = new BaseRequestValidator();
 
         try {
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, {} as any);
             throw new ShouldNotSucceed();
         } catch (e) {
-            expect(e.name).to.be.eq('SecretUndefined');
+            expect(e.name).to.be.eq('EnvironmentError');
+            expect(e.variable).to.be.eq('JWT_SECRET');
         }
 
-        process.env.SECRET = endpoint;
+        process.env.JWT_SECRET = endpoint;
     });
 
     describe('Password', () => {
         it('should call "data" method from RequestValidator', async () => {
+
+            class MockJWTServices {
+                public configure() {
+                    // Configure
+                }
+            }
 
             class MockRequestValidator extends BaseRequestValidator {
                 public data(req, location, onlyValidData: boolean = true, includeOptionals: boolean = true) {
@@ -180,8 +189,9 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 }
             }
 
+            const jwt = new MockJWTServices();
             const validator = new MockRequestValidator();
-            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any);
+            const route = new AuthenticationRoute(new BaseAccountService() as any, validator as any, jwt as any);
             const response = new MockResponse();
             await route.password({} as any, response as any);
 
@@ -197,6 +207,12 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
         it('should call "get" method from AccountService', async () => {
 
+            class MockJWTServices {
+                public configure() {
+                    // Configure
+                }
+            }
+
             class MockAccountService extends BaseAccountService {
                 public by: any;
                 public fields: any;
@@ -208,9 +224,10 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 }
             }
 
+            const jwt = new MockJWTServices();
             const service = new MockAccountService();
             const validator = new BaseRequestValidator({email: 'mail@mail.com', password: '12345678'});
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
             const response = new MockResponse();
             await route.password({} as any, response as any);
 
@@ -224,6 +241,11 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
 
         it('should return UserNotFoundResponse', async () => {
+            class MockJWTServices {
+                public configure() {
+                    // Configure
+                }
+            }
 
             class MockAccountService extends BaseAccountService {
                 public get(by: any, fields: any) {
@@ -231,9 +253,10 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 }
             }
 
+            const jwt = new MockJWTServices();
             const service = new MockAccountService();
             const validator = new BaseRequestValidator({email: 'mail@mail.com', password: '12345678'});
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
             const response = new MockResponse();
 
             await route.password({} as any, response as any);
@@ -251,16 +274,21 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
 
         it('should return UserNotActiveResponse', async () => {
-
+            class MockJWTServices {
+                public configure() {
+                    // Configure
+                }
+            }
             class MockAccountService extends BaseAccountService {
                 public get(by: any, fields: any) {
                     return {id: '1'.repeat(24), email: 'mail@mail.com', active: false};
                 }
             }
 
+            const jwt = new MockJWTServices();
             const service = new MockAccountService();
             const validator = new BaseRequestValidator({email: 'mail@mail.com', password: '12345678'});
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
             const response = new MockResponse();
 
             await route.password({} as any, response as any);
@@ -278,7 +306,11 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
 
         it('should call "password" method', async () => {
-
+            class MockJWTServices {
+                public configure() {
+                    // Configure
+                }
+            }
             class MockAccountService extends BaseAccountService {
                 public data: any;
 
@@ -292,9 +324,10 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 }
             }
 
+            const jwt = new MockJWTServices();
             const service = new MockAccountService();
             const validator = new BaseRequestValidator({email: 'mail@mail.com', password: '12345678'});
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
             const response = new MockResponse();
             await route.password({} as any, response as any);
 
@@ -306,7 +339,12 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
 
         it('should return InvalidPasswordResponse', async () => {
+            class MockJWTServices {
 
+                public configure() {
+                    // Configure
+                }
+            }
             class MockAccountService extends BaseAccountService {
                 public get(by: any, fields: any) {
                     return {id: '1'.repeat(24), email: 'mail@mail.com', active: true, role: 'ADMIN'};
@@ -317,9 +355,10 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 }
             }
 
+            const jwt = new MockJWTServices();
             const service = new MockAccountService();
             const validator = new BaseRequestValidator({email: 'mail@mail.com', password: '12345678'});
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
 
             const response = new MockResponse();
             await route.password({} as any, response as any);
@@ -334,6 +373,18 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
 
         it('should return SuccessResponse', async () => {
+            class MockJWTServices {
+                public data: any;
+
+                public configure() {
+                    // Configure
+                }
+
+                public sign(data) {
+                    this.data = data;
+                    throw new MethodCalled('sign', data);
+                }
+            }
             class MockAccountService extends BaseAccountService {
                 public get(by: any, fields: any) {
                     return {id: '1'.repeat(24), email: 'mail@mail.com', active: true, role: 'ADMIN'};
@@ -344,9 +395,46 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 }
             }
 
+            const jwt = new MockJWTServices();
             const service = new MockAccountService();
             const validator = new BaseRequestValidator({email: 'mail@mail.com', password: '12345678'});
-            const route = new AuthenticationRoute(service as any, validator as any);
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
+
+            const response = new MockResponse();
+            await route.password({} as any, response as any);
+
+            expect(response.sended).to.be.eq(true);
+            expect(response._status).to.be.eq(500);
+
+            expect(jwt.data).to.be.an('object');
+            expect(jwt.data).to.have.keys(['id', 'email', 'role']);
+            expect(jwt.data).to.be.deep.eq({id: '1'.repeat(24), email: 'mail@mail.com', role: 'ADMIN'});
+        });
+
+        it('should return SuccessResponse', async () => {
+            class MockJWTServices {
+                public configure() {
+                    // Configure
+                }
+
+                public sign() {
+                    return 'jwt-token';
+                }
+            }
+            class MockAccountService extends BaseAccountService {
+                public get(by: any, fields: any) {
+                    return {id: '1'.repeat(24), email: 'mail@mail.com', active: true, role: 'ADMIN'};
+                }
+
+                public password() {
+                    return true;
+                }
+            }
+
+            const jwt = new MockJWTServices();
+            const service = new MockAccountService();
+            const validator = new BaseRequestValidator({email: 'mail@mail.com', password: '12345678'});
+            const route = new AuthenticationRoute(service as any, validator as any, jwt as any);
 
             const response = new MockResponse();
             await route.password({} as any, response as any);
@@ -355,8 +443,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             expect(response._status).to.be.eq(200);
             expect(response._data).to.be.an('object');
             expect(response._data).to.have.key('data');
-            expect(response._data.data).to.be.a('string');
-            expect(response._data.data).to.have.lengthOf(200);
+            expect(response._data.data).to.be.eq('jwt-token');
         });
     });
 });

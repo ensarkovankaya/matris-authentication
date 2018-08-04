@@ -1,18 +1,19 @@
 import { Request, Response, Router } from 'express';
-import { sign } from 'jsonwebtoken';
 import { AccountService } from 'matris-account-api';
 import { Logger } from 'matris-logger/dist/logger';
 import { Service } from 'typedi';
-import { EndpointUndefined, SecretUndefined } from '../errors';
+import { EnvironmentError } from '../errors';
 import { rootLogger } from '../logger';
-import { Role } from '../models/role.model';
 import {
     InvalidPasswordResponse,
     ServerErrorResponse,
     SuccessResponse,
+    TokenExpiredResponse,
     UserNotActiveResponse,
     UserNotFoundResponse
 } from '../response';
+import { InvalidTokenResponse } from '../response';
+import { JWTService } from '../services/jwt.service';
 import { RequestValidator } from '../validator';
 
 @Service()
@@ -20,28 +21,37 @@ export class AuthenticationRoute {
 
     public router: Router;
     private logger: Logger;
-    private secret: string;
 
-    constructor(private ac: AccountService, private vl: RequestValidator) {
+    constructor(private ac: AccountService, private vl: RequestValidator, private jwt: JWTService) {
         this.logger = rootLogger.getLogger('AuthenticationRoute', ['route']);
         this.router = Router({caseSensitive: true});
         this.configure();
         this.routes();
     }
 
+    /**
+     * Configure services
+     */
     public configure() {
         // Configure Account Service
         const endpoint = process.env.ACCOUNT_SERVICE;
         if (!endpoint) {
-            throw new EndpointUndefined();
+            throw new EnvironmentError('ACCOUNT_SERVICE');
         }
         this.ac.configure({url: endpoint});
 
-        // Check secret
-        this.secret = process.env.SECRET;
-        if (!this.secret) {
-            throw new SecretUndefined();
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            throw new EnvironmentError('JWT_SECRET');
         }
+
+        const expiresIn = process.env.JWT_EXPIRES_IN;
+        if (!expiresIn) {
+            throw new EnvironmentError('JWT_EXPIRES_IN');
+        }
+
+        // Configure JWT Service
+        this.jwt.configure({expiresIn, secret});
     }
 
     /**
@@ -51,12 +61,12 @@ export class AuthenticationRoute {
      */
     public async password(req: Request, res: Response) {
         // Get data from request
-        let data;
+        let data: { email: string, password: string };
         try {
             data = this.vl.data<{ email: string, password: string }>(req, ['body']);
             this.logger.debug('Data extracted from request.', {data});
         } catch (e) {
-            this.logger.error('Authenticate', e);
+            this.logger.error('Data extraction from request failed', e);
             return new ServerErrorResponse(res).send();
         }
 
@@ -91,9 +101,10 @@ export class AuthenticationRoute {
         if (!valid) {
             return new InvalidPasswordResponse(res).send();
         }
+
         try {
             // Sign
-            const token = this.sign(user.id, user.email, user.role);
+            const token = await this.jwt.sign({id: user.id, email: user.email, role: user.role});
             this.logger.debug('User data signed.', {token});
             return new SuccessResponse(res, token).send();
         } catch (e) {
@@ -103,18 +114,38 @@ export class AuthenticationRoute {
     }
 
     /**
-     * Sign user and returns jwt.
-     * @param {string} id User unique id
-     * @param {string} email User email
-     * @param {Role} role User role
+     * Validates jwt token if token valid returns decoded token.
+     * If token expired returns TokenExpiredResponse
+     * If token invalid returns InvalidTokenResponse
+     * @param {Request} req
+     * @param {Response} res
      */
-    public sign(id: string, email: string, role: Role) {
-        this.logger.debug('Sign', {id, email, role});
+    public async validate(req: Request, res: Response) {
+        // Get data from request
+        let data: {token: string};
         try {
-            return sign({id, email, role}, this.secret);
-        } catch (err) {
-            this.logger.error('Sign', err);
-            throw err;
+            data = this.vl.data<{ token: string }>(req, ['body']);
+            this.logger.debug('Data extracted from request.', {data});
+        } catch (e) {
+            this.logger.error('Data extraction from request failed', e);
+            return new ServerErrorResponse(res).send();
+        }
+
+        try {
+            // Decode Token
+            const decoded = await this.jwt.verify(data.token);
+            this.logger.debug('Token decoded.', {decoded});
+            return new SuccessResponse(res, decoded).send();
+        } catch (e) {
+            if (e.name === 'TokenExpiredError') {
+                this.logger.warn('Token expired.', e);
+                return new TokenExpiredResponse(res).send();
+            } else if (e.name === 'JsonWebTokenError') {
+                this.logger.warn('Token invalid.', e);
+                return new InvalidTokenResponse(res).send();
+            }
+            this.logger.error('Token decoding failed.', e);
+            return new ServerErrorResponse(res).send();
         }
     }
 
@@ -125,12 +156,12 @@ export class AuthenticationRoute {
                     email: {
                         in: ['body'],
                         errorMessage: 'InvalidEmail',
-                        isEmail: true
+                        isEmail: {}
                     },
                     password: {
                         in: ['body'],
+                        errorMessage: 'InvalidPassword',
                         isLength: {
-                            errorMessage: 'InvalidLength',
                             options: {
                                 min: 8,
                                 max: 40
@@ -140,6 +171,23 @@ export class AuthenticationRoute {
                 }),
                 this.vl.validate.bind(this.vl),
                 this.password.bind(this)
+            );
+
+            this.router.post('/verify',
+                this.vl.schema({
+                    token: {
+                        in: ['body'],
+                        errorMessage: 'InvalidToken',
+                        isString: {},
+                        isLength: {
+                            options: {
+                                min: 200
+                            }
+                        }
+                    }
+                }),
+                this.vl.validate.bind(this.vl),
+                this.validate.bind(this)
             );
         } catch (err) {
             this.logger.error('Route configuration failed.', err);
