@@ -110,3 +110,13 @@ export class InvalidTokenResponse extends ErrorResponse {
         }]);
     }
 }
+
+export class TokenNotExpiredResponse extends ErrorResponse {
+    constructor(res: Response, param: string = 'token', location: Location = 'body') {
+        super(res, [{
+            msg: 'TokenNotExpired',
+            location,
+            param
+        }]);
+    }
+}
