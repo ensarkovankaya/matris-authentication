@@ -28,6 +28,7 @@
     "matris-logger": "^1.1.4",
     "mongoose": "^5.2.6",
     "morgan": "^1.9.0",
+    "ms": "^2.1.1",
     "reflect-metadata": "^0.1.12",
     "typedi": "^0.8.0"
   },
