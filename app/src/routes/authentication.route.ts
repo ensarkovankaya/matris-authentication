@@ -1,10 +1,10 @@
 import { Request, Response, Router } from 'express';
 import { AccountService } from 'matris-account-api';
+import { UserSchema } from 'matris-account-api/dist/models/user';
 import { Logger } from 'matris-logger/dist/logger';
 import { Service } from 'typedi';
 import { EnvironmentError, InvalidData } from '../errors';
 import { rootLogger } from '../logger';
-import { IDecodedTokenModel } from '../models/decoded.token.model';
 import {
     InvalidPasswordResponse,
     ServerErrorResponse,
@@ -14,7 +14,7 @@ import {
     UserNotFoundResponse
 } from '../response';
 import { InvalidTokenResponse } from '../response';
-import { JWTService } from '../services/jwt.service';
+import { AuthenticationService } from '../services/auth.service';
 import { RequestValidator } from '../validator';
 
 @Service()
@@ -23,7 +23,7 @@ export class AuthenticationRoute {
     public router: Router;
     private logger: Logger;
 
-    constructor(private ac: AccountService, private vl: RequestValidator, private jwt: JWTService) {
+    constructor(private ac: AccountService, private vl: RequestValidator, private auth: AuthenticationService) {
         this.logger = rootLogger.getLogger('AuthenticationRoute', ['route']);
         this.router = Router({caseSensitive: true});
         this.configure();
@@ -46,13 +46,8 @@ export class AuthenticationRoute {
             throw new EnvironmentError('JWT_SECRET');
         }
 
-        const expiresIn = process.env.JWT_EXPIRES_IN;
-        if (!expiresIn) {
-            throw new EnvironmentError('JWT_EXPIRES_IN');
-        }
-
         // Configure JWT Service
-        this.jwt.configure({expiresIn, secret});
+        this.auth.configure({secret});
     }
 
     /**
@@ -62,11 +57,22 @@ export class AuthenticationRoute {
      */
     public async password(req: Request, res: Response) {
         // Get data from request
-        let data: { email: string, password: string, expiresIn?: number };
+        let data: {
+            email: string;
+            password: string;
+            atExpiresIn: number | string;
+            rtExpiresIn: number | string;
+        };
         try {
-            data = this.vl.data<{ email: string, password: string, expiresIn?: number }>(req, ['body']);
+            data = this.vl.data<{
+                email: string;
+                password: string;
+                atExpiresIn: number;
+                rtExpiresIn: number;
+            }>(req, ['body']);
             this.logger.debug('Data extracted from request.', {data});
-            if (!data || !data.email || !data.password) {
+            if (!data || !data.email || !data.password ||
+                data.atExpiresIn === undefined || !data.rtExpiresIn === undefined) {
                 throw new InvalidData();
             }
         } catch (e) {
@@ -75,7 +81,7 @@ export class AuthenticationRoute {
         }
 
         // Get user from AccountService
-        let user;
+        let user: UserSchema;
         try {
             user = await this.ac.get({email: data.email}, ['_id', 'email', 'role', 'active']);
             this.logger.debug('User recived.', {user});
@@ -107,11 +113,15 @@ export class AuthenticationRoute {
         }
 
         try {
-            // Sign
-            const options = data.expiresIn !== undefined ? {expiresIn: data.expiresIn} : {};
-            const token = await this.jwt.sign({id: user.id, email: user.email, role: user.role}, options);
-            this.logger.debug('User data signed.', {token});
-            return new SuccessResponse(res, token).send();
+            // Authenticate user
+            const tokens = await this.auth.authenticate(
+                user.id,
+                user.role,
+                data.atExpiresIn,
+                data.rtExpiresIn
+            );
+            this.logger.debug('User data signed.', {tokens});
+            return new SuccessResponse(res, tokens).send();
         } catch (e) {
             this.logger.error('Signing user data failed.', e);
             return new ServerErrorResponse(res).send();
@@ -141,10 +151,62 @@ export class AuthenticationRoute {
         }
 
         try {
-            // Decode Token
-            const decoded = await this.jwt.verify<IDecodedTokenModel>(data.token);
-            this.logger.debug('Token decoded.', {decoded});
-            return new SuccessResponse(res, decoded).send();
+            // Verify Token
+            const payload = await this.auth.verify<any>(data.token);
+            this.logger.debug('Token verified.', {payload});
+            return new SuccessResponse(res, payload).send();
+        } catch (e) {
+            if (e.name === 'TokenExpiredError') {
+                this.logger.warn('Token expired.', e);
+                return new TokenExpiredResponse(res).send();
+            } else if (e.name === 'JsonWebTokenError') {
+                this.logger.warn('Token invalid.', e);
+                return new InvalidTokenResponse(res).send();
+            }
+            this.logger.error('Token decoding failed.', e);
+            return new ServerErrorResponse(res).send();
+        }
+    }
+
+    /**
+     * Returns new json web token for user if tokens are valid
+     * @param {Request} req
+     * @param {Response} res
+     */
+    public async refresh(req: Request, res: Response) {
+        // Get data from request
+        let data: {
+            accessToken: string;
+            refreshToken: string;
+            atExpiresIn: number | string;
+            rtExpiresIn: number | string;
+        };
+        try {
+            data = this.vl.data<{
+                accessToken: string;
+                refreshToken: string;
+                atExpiresIn: number | string;
+                rtExpiresIn: number | string;
+            }>(req, ['body']);
+            this.logger.debug('Data extracted from request.', {data});
+            if (!data || !data.accessToken || !data.refreshToken || !data.atExpiresIn || !data.rtExpiresIn) {
+                throw new InvalidData();
+            }
+        } catch (e) {
+            this.logger.error('Data extraction from request failed', e);
+            return new ServerErrorResponse(res).send();
+        }
+
+        try {
+            // Refresh Token
+            const tokens = await this.auth.refresh(
+                data.accessToken,
+                data.refreshToken,
+                data.atExpiresIn,
+                data.rtExpiresIn
+            );
+            this.logger.debug('Token decoded.', {tokens});
+            return new SuccessResponse(res, tokens).send();
         } catch (e) {
             if (e.name === 'TokenExpiredError') {
                 this.logger.warn('Token expired.', e);
@@ -177,16 +239,29 @@ export class AuthenticationRoute {
                             }
                         }
                     },
-                    expiresIn: {
+                    atExpiresIn: {
                         in: ['body'],
-                        optional: {},
-                        isNumeric: {
-                            options: {
-                                min: 0,
-                                max: 60 * 60 * 24 * 30 // 1 month
+                        customSanitizer: {
+                            options: (value): string | number => {
+                                try {
+                                    return parseInt(value, 10);
+                                } catch (e) {
+                                    return value;
+                                }
                             }
-                        },
-                        toInt: {}
+                        }
+                    },
+                    rtExpiresIn: {
+                        in: ['body'],
+                        customSanitizer: {
+                            options: (value): string | number => {
+                                try {
+                                    return parseInt(value, 10);
+                                } catch (e) {
+                                    return value;
+                                }
+                            }
+                        }
                     }
                 }),
                 this.vl.validate.bind(this.vl),
@@ -197,11 +272,58 @@ export class AuthenticationRoute {
                 this.vl.schema({
                     token: {
                         in: ['body'],
-                        errorMessage: 'InvalidToken',
-                        isString: {},
+                        errorMessage: 'required'
+                    }
+                }),
+                this.vl.validate.bind(this.vl),
+                this.validate.bind(this)
+            );
+
+            this.router.post('/refresh',
+                this.vl.schema({
+                    accessToken: {
+                        in: ['body'],
+                        errorMessage: 'required',
+                        isString: true,
                         isLength: {
                             options: {
-                                min: 200
+                                min: 100,
+                                max: 300
+                            }
+                        }
+                    },
+                    refreshToken: {
+                        in: ['body'],
+                        errorMessage: 'required',
+                        isString: true,
+                        isLength: {
+                            options: {
+                                min: 100,
+                                max: 300
+                            }
+                        }
+                    },
+                    atExpiresIn: {
+                        in: ['body'],
+                        customSanitizer: {
+                            options: (value): string | number => {
+                                try {
+                                    return parseInt(value, 10);
+                                } catch (e) {
+                                    return value;
+                                }
+                            }
+                        }
+                    },
+                    rtExpiresIn: {
+                        in: ['body'],
+                        customSanitizer: {
+                            options: (value): string | number => {
+                                try {
+                                    return parseInt(value, 10);
+                                } catch (e) {
+                                    return value;
+                                }
                             }
                         }
                     }
