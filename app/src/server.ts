@@ -4,10 +4,10 @@ import * as cors from "cors";
 import * as express from "express";
 import * as expressValidator from 'express-validator';
 import * as helmet from "helmet";
+import { Logger } from "matris-logger";
 import * as morgan from "morgan";
 import "reflect-metadata";
 import { Container } from 'typedi';
-import { Logger } from "../node_modules/matris-logger";
 import { rootLogger } from './logger';
 import { AuthenticationRoute } from './routes/authentication.route';
 
