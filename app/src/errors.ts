@@ -9,3 +9,11 @@ export class EnvironmentError extends Error {
 export class InvalidData extends Error {
     public name = 'InvalidData';
 }
+
+export class SecretUndefined extends Error {
+    public name = 'SecretUndefined';
+}
+
+export class TokensNotMatched extends Error {
+    public name = 'TokensNotMatched';
+}
