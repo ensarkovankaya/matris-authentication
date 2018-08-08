@@ -241,26 +241,14 @@ export class AuthenticationRoute {
                     },
                     atExpiresIn: {
                         in: ['body'],
-                        customSanitizer: {
-                            options: (value): string | number => {
-                                try {
-                                    return parseInt(value, 10);
-                                } catch (e) {
-                                    return value;
-                                }
-                            }
+                        custom: {
+                            options: this.vl.isMsValue.bind(this.vl)
                         }
                     },
                     rtExpiresIn: {
                         in: ['body'],
-                        customSanitizer: {
-                            options: (value): string | number => {
-                                try {
-                                    return parseInt(value, 10);
-                                } catch (e) {
-                                    return value;
-                                }
-                            }
+                        custom: {
+                            options: this.vl.isMsValue.bind(this.vl)
                         }
                     }
                 }),
@@ -305,26 +293,14 @@ export class AuthenticationRoute {
                     },
                     atExpiresIn: {
                         in: ['body'],
-                        customSanitizer: {
-                            options: (value): string | number => {
-                                try {
-                                    return parseInt(value, 10);
-                                } catch (e) {
-                                    return value;
-                                }
-                            }
+                        custom: {
+                            options: this.vl.isMsValue.bind(this.vl)
                         }
                     },
                     rtExpiresIn: {
                         in: ['body'],
-                        customSanitizer: {
-                            options: (value): string | number => {
-                                try {
-                                    return parseInt(value, 10);
-                                } catch (e) {
-                                    return value;
-                                }
-                            }
+                        custom: {
+                            options: this.vl.isMsValue.bind(this.vl)
                         }
                     }
                 }),

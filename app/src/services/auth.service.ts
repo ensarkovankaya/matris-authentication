@@ -144,14 +144,14 @@ export class AuthenticationService {
      * Generates refresh token
      * @param {string} id: Access token jit (JWT id)
      * @param {string | number} acExpiresIn: Access token expires in.
-     * @param {string | number} refreshTokenExpiresIn: Refresh token expires in.
+     * @param {string | number} rtExpiresIn: Refresh token expires in.
      */
-    public async generateRefreshToken(id: string, accessTokenExpiresIn: string | number,
-                                      refreshTokenExpiresIn: number | string): Promise<string> {
-        this.logger.debug('Genareting refresh token', {id, accessTokenExpiresIn, refreshTokenExpiresIn});
+    public async generateRefreshToken(id: string, acExpiresIn: string | number,
+                                      rtExpiresIn: number | string): Promise<string> {
+        this.logger.debug('Genareting refresh token', {id, acExpiresIn, rtExpiresIn});
         try {
-            const notBefore = ms(accessTokenExpiresIn);
-            const expiresIn = notBefore + ms(refreshTokenExpiresIn);
+            const notBefore = typeof acExpiresIn === 'string' ? ms(acExpiresIn) : acExpiresIn;
+            const expiresIn = notBefore + (typeof rtExpiresIn === 'string' ? ms(rtExpiresIn) : rtExpiresIn);
             return await this.sign({}, {notBefore, subject: id, expiresIn});
         } catch (e) {
             this.logger.error('Genareting refresh token failed', e);
