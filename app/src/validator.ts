@@ -1,9 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import { checkSchema, ValidationChain, validationResult, ValidationSchema } from 'express-validator/check';
 import { Location } from 'express-validator/check/location';
-import { matchedData, MatchedDataOptions } from 'express-validator/filter';
+import { matchedData } from 'express-validator/filter';
 import { Logger } from 'matris-logger';
+import * as ms from 'ms';
 import { Service } from 'typedi';
+import { NotMSValue } from './errors';
 import { rootLogger } from './logger';
 import { ErrorResponse, IValidationError, ServerErrorResponse } from './response';
 
@@ -54,5 +56,17 @@ export class RequestValidator {
 
     public schema(schema: ValidationSchema): ValidationChain[] {
         return checkSchema(schema);
+    }
+
+    public isMsValue(value: any, {req, location, path}) {
+        try {
+            this.logger.debug('IsMSValue', {value});
+            if (ms(value) === undefined) {
+                throw new Error();
+            }
+            return value;
+        } catch (e) {
+            throw new NotMSValue();
+        }
     }
 }
