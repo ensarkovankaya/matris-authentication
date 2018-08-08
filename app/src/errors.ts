@@ -17,3 +17,8 @@ export class SecretUndefined extends Error {
 export class TokensNotMatched extends Error {
     public name = 'TokensNotMatched';
 }
+
+export class NotMSValue extends Error {
+    public name = 'NotMSValue';
+    public message = 'NotMSValue';
+}
