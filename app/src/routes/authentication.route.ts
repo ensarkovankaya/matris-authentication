@@ -15,7 +15,7 @@ import {
 } from '../response';
 import { InvalidTokenResponse } from '../response';
 import { AuthenticationService } from '../services/auth.service';
-import { RequestValidator } from '../validator';
+import { RequestValidatorService } from '../services/request.validator.service';
 
 @Service()
 export class AuthenticationRoute {
@@ -23,7 +23,7 @@ export class AuthenticationRoute {
     public router: Router;
     private logger: Logger;
 
-    constructor(private ac: AccountService, private vl: RequestValidator, private auth: AuthenticationService) {
+    constructor(private ac: AccountService, private vl: RequestValidatorService, private auth: AuthenticationService) {
         this.logger = rootLogger.getLogger('AuthenticationRoute', ['route']);
         this.router = Router({caseSensitive: true});
         this.configure();

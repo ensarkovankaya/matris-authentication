@@ -5,12 +5,12 @@ import { matchedData } from 'express-validator/filter';
 import { Logger } from 'matris-logger';
 import * as ms from 'ms';
 import { Service } from 'typedi';
-import { NotMSValue } from './errors';
-import { rootLogger } from './logger';
-import { ErrorResponse, IValidationError, ServerErrorResponse } from './response';
+import { NotMSValue } from '../errors';
+import { rootLogger } from '../logger';
+import { ErrorResponse, IValidationError, ServerErrorResponse } from '../response';
 
 @Service()
-export class RequestValidator {
+export class RequestValidatorService {
     private logger: Logger;
 
     constructor() {
