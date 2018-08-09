@@ -60,7 +60,7 @@ class MockRequest {
                 public cookies: any = {}) {}
 }
 
-class MockRequestValidator {
+class MockRequestValidatorService {
 
     public schema(schema: any) {
         return [];
@@ -77,6 +77,10 @@ class MockRequestValidator {
             data = {...data, ...requestData};
         }
         return data;
+    }
+
+    public isMsValue() {
+        return true;
     }
 }
 
@@ -124,7 +128,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         try {
             const route = new AuthenticationRoute(
                 new AccountService() as any,
-                new MockRequestValidator() as any, {} as any);
+                new MockRequestValidatorService() as any, {} as any);
             throw new ShouldNotSucceed();
         } catch (e) {
             expect(e.name).to.be.eq('MethodCalled');
@@ -150,7 +154,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         try {
             const route = new AuthenticationRoute(
                 new AccountService() as any,
-                new MockRequestValidator() as any, {} as any
+                new MockRequestValidatorService() as any, {} as any
             );
             throw new ShouldNotSucceed();
         } catch (e) {
@@ -176,7 +180,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         try {
             const route = new AuthenticationRoute(
                 new AccountService() as any,
-                new MockRequestValidator() as any, {} as any
+                new MockRequestValidatorService() as any, {} as any
             );
             throw new ShouldNotSucceed();
         } catch (e) {
@@ -190,7 +194,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
     describe('Password', () => {
         it('should call "data" method from RequestValidator', async () => {
 
-            class RequestValidator extends MockRequestValidator {
+            class RequestValidator extends MockRequestValidatorService {
                 public args: any;
 
                 public data(req, location) {
@@ -222,7 +226,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         it('should raise IvalidData', async () => {
             const route = new AuthenticationRoute(
                 new MockAccountService() as any,
-                new MockRequestValidator() as any,
+                new MockRequestValidatorService() as any,
                 new MockAuthService() as any
             );
 
@@ -252,7 +256,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
             const route = new AuthenticationRoute(
                 service as any,
-                new MockRequestValidator() as any,
+                new MockRequestValidatorService() as any,
                 new MockAuthService() as any
             );
 
@@ -283,7 +287,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const route = new AuthenticationRoute(
-                new AccountService() as any, new MockRequestValidator() as any, new MockAuthService() as any
+                new AccountService() as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
 
             const response = new MockResponse();
@@ -316,7 +320,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const route = new AuthenticationRoute(
-                new AccountService() as any, new MockRequestValidator() as any, new MockAuthService() as any
+                new AccountService() as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
 
             const response = new MockResponse();
@@ -357,7 +361,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
             const service = new AccountService();
             const route = new AuthenticationRoute(
-                service as any, new MockRequestValidator() as any, new MockAuthService() as any
+                service as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
 
             const response = new MockResponse();
@@ -388,7 +392,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const route = new AuthenticationRoute(
-                new AccountService() as any, new MockRequestValidator() as any, new MockAuthService() as any
+                new AccountService() as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
 
             const response = new MockResponse();
@@ -439,7 +443,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const auth = new AuthService();
 
             const route = new AuthenticationRoute(
-                new AccountService() as any, new MockRequestValidator() as any, auth as any
+                new AccountService() as any, new MockRequestValidatorService() as any, auth as any
             );
 
             const response = new MockResponse();
@@ -494,7 +498,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const route = new AuthenticationRoute(
-                new AccountService() as any, new MockRequestValidator() as any, new AuthServices() as any
+                new AccountService() as any, new MockRequestValidatorService() as any, new AuthServices() as any
             );
 
             const response = new MockResponse();
@@ -531,7 +535,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
     describe('Validate', () => {
         it('should call "data" method from RequestValidator', async () => {
 
-            class RequestValidator extends MockRequestValidator {
+            class RequestValidator extends MockRequestValidatorService {
                 public args: any;
 
                 public data(req, location) {
@@ -558,7 +562,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
         it('should raise InvalidData', async () => {
             const route = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, new MockAuthService() as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
             const response = new MockResponse();
             await route.validate(new MockRequest() as any, response as any);
@@ -583,7 +587,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const auth = new AuthService();
-            const validator = new MockRequestValidator();
+            const validator = new MockRequestValidatorService();
             const route = new AuthenticationRoute(new MockAccountService() as any, validator as any, auth as any);
 
             const response = new MockResponse();
@@ -616,7 +620,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const route = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, new AuthService() as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, new AuthService() as any
             );
 
             const response = new MockResponse();
@@ -653,7 +657,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const route = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, new AuthService() as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, new AuthService() as any
             );
 
             const response = new MockResponse();
@@ -687,7 +691,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             }
 
             const route = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, new AuthService() as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, new AuthService() as any
             );
 
             const response = new MockResponse();
@@ -704,7 +708,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
     describe('Refresh', () => {
         it('should call "data" method from RequestValidator', async () => {
 
-            class RequestValidator extends MockRequestValidator {
+            class RequestValidator extends MockRequestValidatorService {
                 public args: any;
 
                 public data(req, location) {
@@ -731,7 +735,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
         it('should raise InvalidData', async () => {
             const route = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, new MockAuthService() as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
             const response = new MockResponse();
             await route.refresh(new MockRequest() as any, response as any);
@@ -761,7 +765,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const auth = new AuthService();
 
             const router = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, auth as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, auth as any
             );
             const response = new MockResponse();
             const request = new MockRequest({
@@ -797,7 +801,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const auth = new AuthService();
 
             const router = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, auth as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, auth as any
             );
             const response = new MockResponse();
             const request = new MockRequest({
@@ -838,7 +842,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const auth = new AuthService();
 
             const router = new AuthenticationRoute(
-                new MockAccountService() as any, new MockRequestValidator() as any, auth as any
+                new MockAccountService() as any, new MockRequestValidatorService() as any, auth as any
             );
             const response = new MockResponse();
             const request = new MockRequest({
