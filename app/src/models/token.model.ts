@@ -36,5 +36,5 @@ export interface IAuthToken {
         token: string;
         expiresAt: number;
         notBefore: number;
-};
+    };
 }
