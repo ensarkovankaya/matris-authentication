@@ -146,11 +146,11 @@ export class AuthenticationService {
      * @param {string | number} acExpiresIn: Access token expires in.
      * @param {string | number} rtExpiresIn: Refresh token expires in.
      */
-    public async generateRefreshToken(id: string, acExpiresIn: string | number,
+    public async generateRefreshToken(id: string, atExpiresIn: string | number,
                                       rtExpiresIn: number | string): Promise<string> {
-        this.logger.debug('Genareting refresh token', {id, acExpiresIn, rtExpiresIn});
+        this.logger.debug('Genareting refresh token', {id, atExpiresIn, rtExpiresIn});
         try {
-            const notBefore = typeof acExpiresIn === 'string' ? ms(acExpiresIn) : acExpiresIn;
+            const notBefore = typeof atExpiresIn === 'string' ? ms(atExpiresIn) : atExpiresIn;
             const expiresIn = notBefore + (typeof rtExpiresIn === 'string' ? ms(rtExpiresIn) : rtExpiresIn);
             return await this.sign({}, {notBefore, subject: id, expiresIn});
         } catch (e) {
