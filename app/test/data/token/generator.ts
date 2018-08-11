@@ -15,9 +15,9 @@ export class TokenGenerator {
                            rtExpiresIn: string | number, user: {_id: string, role: string}): Promise<IAuthToken> {
         const jwtid = this.generateID(24);
 
-        const [accessToken, refreshToken] = await Promise.all([
-            this.accessToken(jwtid, atExpiresIn, user._id, user.role, secret),
-            this.refreshToken(jwtid, rtExpiresIn, atExpiresIn, secret)
+        const [refreshToken, accessToken] = await Promise.all([
+            this.refreshToken(jwtid, atExpiresIn, rtExpiresIn, secret),
+            this.accessToken(jwtid, atExpiresIn, user._id, user.role, secret)
         ]);
 
         const [atDecoded, rtDecoded] = await Promise.all([
