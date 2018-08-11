@@ -195,12 +195,9 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         it('should call "data" method from RequestValidator', async () => {
 
             class RequestValidator extends MockRequestValidatorService {
-                public args: any;
 
                 public data(req, location) {
-                    this.args = {req, location};
-                    throw new MethodCalled('data', req);
-                    return {};
+                    throw new MethodCalled('data', {req, location});
                 }
             }
 
@@ -211,16 +208,19 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
             const response = new MockResponse();
             const request = new MockRequest({a: 1, b: 2});
-            await route.password(request as any, response as any);
-
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(validator.args).to.be.an('object');
-            expect(validator.args).to.have.keys(['req', 'location']);
-            expect(validator.args.location).to.be.deep.eq(['body']);
-            expect(validator.args.req).to.be.an('object');
-            expect(validator.args.req).to.be.deep.eq(request);
+            try {
+                await route.password(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('data');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.have.keys(['req', 'location']);
+                expect(e.args).to.be.deep.eq({
+                    req: request,
+                    location: ['body']
+                });
+            }
         });
 
         it('should raise IvalidData', async () => {
@@ -233,21 +233,19 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const request = new MockRequest({email: 'mail@mail.com', password: '12345678'});
             const response = new MockResponse();
 
-            await route.password(request as any, response as any);
-
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
+            try {
+                await route.password(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('InvalidData');
+            }
         });
 
         it('should call "get" method from AccountService', async () => {
 
             class AccountService extends MockAccountService {
-                public by: any;
-                public fields: any;
 
                 public get(by: any, fields: any) {
-                    this.by = by;
-                    this.fields = fields;
                     throw new MethodCalled('get', {by, fields});
                 }
             }
@@ -267,15 +265,20 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 rtExpiresIn: '2h'
             });
             const response = new MockResponse();
-            await route.password(request as any, response as any);
 
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(service.by).to.be.an('object');
-            expect(service.by).to.be.deep.eq({email: 'mail@mail.com'});
-            expect(service.fields).to.be.an('array');
-            expect(service.fields).to.be.deep.eq(['_id', 'email', 'role', 'active']);
+            try {
+                await route.password(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('get');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.have.keys(['by', 'fields']);
+                expect(e.args).to.be.deep.eq({
+                    by: {email: 'mail@mail.com'},
+                    fields: ['_id', 'email', 'role', 'active']
+                });
+            }
         });
 
         it('should return UserNotFoundResponse', async () => {
@@ -347,14 +350,12 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
         it('should call "password" method', async () => {
             class AccountService extends MockAccountService {
-                public data: any;
 
                 public get(by: any, fields: any) {
                     return {id: '1'.repeat(24), email: 'mail@mail.com', active: true, role: 'ADMIN'};
                 }
 
                 public password(email: string, password: string) {
-                    this.data = {email, password};
                     throw new MethodCalled('password', {email, password});
                 }
             }
@@ -371,13 +372,19 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 atExpiresIn: '1h',
                 rtExpiresIn: '2h'
             });
-            await route.password(request as any, response as any);
 
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(service.data).to.be.an('object');
-            expect(service.data).to.be.deep.eq({email: 'mail@mail.com', password: '12345678'});
+            try {
+                await route.password(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('password');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.be.deep.eq({
+                    email: 'mail@mail.com',
+                    password: '12345678'
+                });
+            }
         });
 
         it('should return InvalidPasswordResponse', async () => {
@@ -415,19 +422,11 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
         it('should call "Authenticate" method from AuthService', async () => {
             class AuthService extends MockAuthService {
-                public id: any;
-                public role: any;
-                public accessTokenExpiresIn: any;
-                public refreshTokenExpiresIn: any;
-                public data: any;
 
-                public authenticate(id, role, accessTokenExpiresIn, refreshTokenExpiresIn, data?) {
-                    this.id = id;
-                    this.role = role;
-                    this.accessTokenExpiresIn = accessTokenExpiresIn;
-                    this.refreshTokenExpiresIn = refreshTokenExpiresIn;
-                    this.data = data;
-                    throw new MethodCalled('authenticate');
+                public authenticate(id, role, atExpiresIn, rtExpiresIn, data?) {
+                    throw new MethodCalled('authenticate', {
+                        id, role, atExpiresIn, rtExpiresIn, data
+                    });
                 }
             }
             class AccountService extends MockAccountService {
@@ -453,16 +452,22 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 atExpiresIn: '1h',
                 rtExpiresIn: '2h'
             });
-            await route.password(request as any, response as any);
 
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(auth.data).to.be.eq(undefined);
-            expect(auth.id).to.be.eq('1'.repeat(24));
-            expect(auth.role).to.be.eq('ADMIN');
-            expect(auth.accessTokenExpiresIn).to.be.eq('1h');
-            expect(auth.refreshTokenExpiresIn).to.be.eq('2h');
+            try {
+                await route.password(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('authenticate');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.be.deep.eq({
+                    id: '1'.repeat(24),
+                    role: 'ADMIN',
+                    atExpiresIn: '1h',
+                    rtExpiresIn: '2h',
+                    data: undefined
+                });
+            }
         });
 
         it('should return SuccessResponse', async () => {
@@ -536,11 +541,9 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         it('should call "data" method from RequestValidator', async () => {
 
             class RequestValidator extends MockRequestValidatorService {
-                public args: any;
 
                 public data(req, location) {
-                    this.args = {req, location};
-                    throw new MethodCalled('data', this.args);
+                    throw new MethodCalled('data', {req, location});
                 }
             }
 
@@ -550,14 +553,19 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             );
 
             const response = new MockResponse();
-            await route.validate(new MockRequest() as any, response as any);
-
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(validator.args).to.be.an('object');
-            expect(validator.args).to.have.keys(['req', 'location']);
-            expect(validator.args.location).to.be.deep.eq(['body']);
+            const request = new MockRequest();
+            try {
+                await route.validate(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('data');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.be.deep.eq({
+                    req: request,
+                    location: ['body']
+                });
+            }
         });
 
         it('should raise InvalidData', async () => {
@@ -565,24 +573,25 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 new MockAccountService() as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
             const response = new MockResponse();
-            await route.validate(new MockRequest() as any, response as any);
 
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
+            try {
+                await route.validate(new MockRequest() as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('InvalidData');
+            }
         });
 
         it('should call "verify" method from AuthService', async () => {
 
             class AuthService {
-                public token: string;
 
                 public configure() {
                     // Configure
                 }
 
                 public verify(token) {
-                    this.token = token;
-                    throw new MethodCalled('verify', token);
+                    throw new MethodCalled('verify', {token});
                 }
             }
 
@@ -593,13 +602,15 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const response = new MockResponse();
             const request = new MockRequest({token: 'jwt-token'});
 
-            await route.validate(request as any, response as any);
-
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(auth.token).to.be.a('string');
-            expect(auth.token).to.be.eq('jwt-token');
+            try {
+                await route.validate(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('verify');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.be.deep.eq({token: 'jwt-token'});
+            }
         });
 
         it('should return TokenExpiredResponse', async () => {
@@ -640,7 +651,6 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
 
         it('should return InvalidTokenResponse', async () => {
-
             class AuthService {
                 public token: string;
 
@@ -677,7 +687,6 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
 
         it('should return SuccessResponse', async () => {
-
             class AuthService {
                 public token: string;
 
@@ -709,11 +718,9 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         it('should call "data" method from RequestValidator', async () => {
 
             class RequestValidator extends MockRequestValidatorService {
-                public args: any;
 
                 public data(req, location) {
-                    this.args = {req, location};
-                    throw new MethodCalled('data', this.args);
+                    throw new MethodCalled('data', {req, location});
                 }
             }
 
@@ -723,14 +730,17 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             );
 
             const response = new MockResponse();
-            await route.refresh(new MockRequest() as any, response as any);
+            const request = new MockRequest();
 
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(validator.args).to.be.an('object');
-            expect(validator.args).to.have.keys(['req', 'location']);
-            expect(validator.args.location).to.be.deep.eq(['body']);
+            try {
+                await route.refresh(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('data');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.be.deep.eq({req: request, location: ['body']});
+            }
         });
 
         it('should raise InvalidData', async () => {
@@ -738,27 +748,22 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 new MockAccountService() as any, new MockRequestValidatorService() as any, new MockAuthService() as any
             );
             const response = new MockResponse();
-            await route.refresh(new MockRequest() as any, response as any);
 
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
+            try {
+                await route.refresh(new MockRequest() as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('InvalidData');
+            }
         });
 
         it('should call "refresh" method from AuthService', async () => {
-
             class AuthService extends MockAuthService {
 
-                public accessToken: any;
-                public refreshToken: any;
-                public atExpiresIn: any;
-                public rtExpiresIn: any;
-
                 public refresh(accessToken, refreshToken, atExpiresIn, rtExpiresIn) {
-                    this.accessToken = accessToken;
-                    this.refreshToken = refreshToken;
-                    this.atExpiresIn = atExpiresIn;
-                    this.rtExpiresIn = rtExpiresIn;
-                    throw new MethodCalled('refresh');
+                    throw new MethodCalled('refresh', {
+                        accessToken, refreshToken, atExpiresIn, rtExpiresIn
+                    });
                 }
             }
 
@@ -775,19 +780,23 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                 rtExpiresIn: '2h'
             });
 
-            await router.refresh(request as any, response as any);
-
-            expect(response.sended).to.be.eq(true);
-            expect(response._status).to.be.eq(500);
-
-            expect(auth.accessToken).to.be.eq('access-token');
-            expect(auth.refreshToken).to.be.eq('refresh-token');
-            expect(auth.atExpiresIn).to.be.eq('1h');
-            expect(auth.rtExpiresIn).to.be.eq('2h');
+            try {
+                await router.refresh(request as any, response as any);
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('MethodCalled');
+                expect(e.method).to.be.eq('refresh');
+                expect(e.args).to.be.an('object');
+                expect(e.args).to.be.deep.eq({
+                    accessToken: 'access-token',
+                    refreshToken: 'refresh-token',
+                    atExpiresIn: '1h',
+                    rtExpiresIn: '2h'
+                });
+            }
         });
 
         it('should response with TokenExpiredResponse', async () => {
-
             class AuthService extends MockAuthService {
 
                 public refresh() {

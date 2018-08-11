@@ -1,3 +1,5 @@
+import { IAccessTokenPayload, IRefreshTokenPayload } from '../../../src/models/token.model';
+
 interface IDecodedToken<T> {
     header: {
         alg: string;
@@ -21,18 +23,7 @@ export interface IToken {
 
 export interface IAuthToken {
     accessToken: string;
-    accessDecoded: IDecodedToken<{
-        iat: number;
-        exp: number;
-        aud: string;
-        sub: string;
-        jti: string;
-    }>;
+    atDecoded: IAccessTokenPayload;
     refreshToken: string;
-    refreshDecoded: IDecodedToken<{
-        iat: number;
-        nbf: number;
-        exp: number;
-        sub: string;
-    }>;
+    rtDecoded: IRefreshTokenPayload;
 }

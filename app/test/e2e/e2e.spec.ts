@@ -4,7 +4,7 @@ import { after, before, describe, it } from 'mocha';
 import "reflect-metadata";
 import { IAuthToken } from '../../src/models/token.model';
 import { Server } from '../../src/server';
-import { RefreshTokenGenerator } from '../data/tokens/refresh.token.generator';
+import { TokenGenerator } from '../data/token/generator';
 import { Database } from '../data/valid/database';
 import { IDBUserModel } from '../data/valid/db.model';
 import { HttpClient } from './http.client';
@@ -132,23 +132,19 @@ describe('E2E', () => {
 
     describe('Refresh', () => {
         it('should refresh', async () => {
-            try {
-                const generator = new RefreshTokenGenerator(process.env.JWT_SECRET);
+            const generator = new TokenGenerator();
 
-                const token = await generator.one();
+            const tokens = await generator.authToken(
+                process.env.JWT_SECRET, '1ms', '1m',
+                generator.db.one(u => u.active === true && u.deleted === false)
+            );
 
-                await client.refresh({
-                accessToken: token.accessToken,
-                refreshToken: token.refreshToken,
+            await client.refresh({
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken,
                 atExpiresIn: '1h',
                 rtExpiresIn: '2h'
             });
-            } catch (e) {
-                console.log(e.response);
-                console.log('Status:', e.status);
-                console.log('Errors:' , e.data.errors);
-                throw e;
-            }
         });
     });
 });
