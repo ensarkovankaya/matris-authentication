@@ -130,7 +130,7 @@ describe('E2E', () => {
         }).timeout(4000);
     });
 
-    describe.only('Refresh', () => {
+    describe('Refresh', () => {
         it('should refresh', async () => {
             try {
                 const generator = new RefreshTokenGenerator(process.env.JWT_SECRET);
