@@ -195,7 +195,7 @@ export class AuthenticationService {
                 verify(token, this.secret, options, (err, decoded) => err ? reject(err) : resolve(decoded as any));
             });
         } catch (err) {
-            this.logger.error('Verification failed', err);
+            this.logger.error('Token verification failed', err);
             throw err;
         }
     }
