@@ -62,11 +62,21 @@ export class RequestValidatorService {
         }
     }
 
+    /**
+     * Generates a validation chain with given schema
+     * @param {ValidationSchema} schema
+     * @returns {ValidationChain[]}
+     */
     public schema(schema: ValidationSchema): ValidationChain[] {
         return checkSchema(schema);
     }
 
-    public isMsValue(value: any, {req, location, path}) {
+    /**
+     * Checks is given value is convertable by ms library
+     * @param {any} value
+     * @returns {any} value
+     */
+    public isMsValue(value: any): any {
         try {
             this.logger.debug('IsMSValue', {value});
             if (ms(value) === undefined) {
