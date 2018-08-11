@@ -47,11 +47,19 @@ export class RequestValidatorService {
      */
     public data<T>(req: Request,
                    locations: Location[], onlyValidData: boolean = true, includeOptionals: boolean = true): T {
-        return matchedData(req, {
-            locations,
-            onlyValidData,
-            includeOptionals
-        }) as T;
+        this.logger.debug('Data extracting', {locations, onlyValidData, includeOptionals});
+        try {
+            const data = matchedData(req, {
+                locations,
+                onlyValidData,
+                includeOptionals
+            }) as T;
+            this.logger.debug('Data extracted', data);
+            return data;
+        } catch (e) {
+            this.logger.error('Data extraction from request failed', e);
+            throw e;
+        }
     }
 
     public schema(schema: ValidationSchema): ValidationChain[] {
