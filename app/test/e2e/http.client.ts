@@ -48,6 +48,10 @@ export class HttpClient {
         return this.post<T>('verify', data);
     }
 
+    public refresh<T>(data: any) {
+        return this.post<T>('refresh', data);
+    }
+
     private async post<T>(url: string, data?: any): Promise<AxiosResponse<T>> {
         try {
             this.logger.debug('Post', {url, data});
