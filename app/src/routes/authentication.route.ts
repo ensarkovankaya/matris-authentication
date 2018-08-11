@@ -3,7 +3,7 @@ import { AccountService } from 'matris-account-api';
 import { UserSchema } from 'matris-account-api/dist/models/user';
 import { Logger } from 'matris-logger/dist/logger';
 import { Service } from 'typedi';
-import { EnvironmentError } from '../errors';
+import { EnvironmentError, InvalidData } from '../errors';
 import { rootLogger } from '../logger';
 import {
     InvalidPasswordResponse,
@@ -62,6 +62,10 @@ export class AuthenticationRoute {
             atExpiresIn: number;
             rtExpiresIn: number;
         }>(req, ['body']);
+
+        if (!data || !data.email || !data.password || !data.atExpiresIn || !data.rtExpiresIn) {
+            throw new InvalidData();
+        }
 
         // Get user from AccountService
         let user: UserSchema;
@@ -122,6 +126,10 @@ export class AuthenticationRoute {
         // Get data from request
         const data = this.vl.data<{ token: string }>(req, ['body']);
 
+        if (!data || !data.token) {
+            throw new InvalidData();
+        }
+
         try {
             // Verify Token
             const payload = await this.auth.verify<any>(data.token);
@@ -153,6 +161,10 @@ export class AuthenticationRoute {
             atExpiresIn: number | string;
             rtExpiresIn: number | string;
         }>(req, ['body']);
+
+        if (!data || !data.accessToken || !data.refreshToken || !data.atExpiresIn || !data.rtExpiresIn) {
+            throw new InvalidData();
+        }
 
         try {
             // Refresh Token
