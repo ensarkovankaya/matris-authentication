@@ -131,20 +131,52 @@ describe('E2E', () => {
     });
 
     describe('Refresh', () => {
-        it('should refresh', async () => {
+        it('should return new tokens', async () => {
             const generator = new TokenGenerator();
 
             const tokens = await generator.authToken(
-                process.env.JWT_SECRET, '1ms', '1m',
-                generator.db.one(u => u.active === true && u.deleted === false)
+                process.env.JWT_SECRET, 0, '1m',
+                generator.db.one(u => u.active && !u.deleted)
             );
 
-            await client.refresh({
+            const response = await client.refresh<{data: IAuthToken}>({
                 accessToken: tokens.accessToken,
                 refreshToken: tokens.refreshToken,
                 atExpiresIn: '1h',
                 rtExpiresIn: '2h'
             });
+
+            expect(response.status).to.be.eq(200);
+            expect(response.data).to.be.an('object');
+            expect(response.data.data).to.be.an('object');
+            expect(response.data.data).to.have.keys(['accessToken', 'refreshToken']);
+
+            expect(response.data.data.accessToken).to.be.an('object');
+            expect(response.data.data.accessToken).to.have.keys(['tokenType', 'token', 'expiresAt']);
+
+            expect(response.data.data.accessToken.token).to.be.a('string');
+            expect(response.data.data.accessToken.token.length).to.be.gt(100);
+
+            expect(response.data.data.accessToken.tokenType).to.be.a('string');
+            expect(response.data.data.accessToken.tokenType).to.be.eq('Bearer');
+
+            expect(response.data.data.accessToken.expiresAt).to.be.a('number');
+            expect(new Date(response.data.data.accessToken.expiresAt * 1000)).to.be.a('date');
+
+            expect(response.data.data.refreshToken).to.be.an('object');
+            expect(response.data.data.refreshToken).to.have.keys(['tokenType', 'token', 'expiresAt', 'notBefore']);
+
+            expect(response.data.data.refreshToken.token).to.be.a('string');
+            expect(response.data.data.refreshToken.token.length).to.be.gt(100);
+
+            expect(response.data.data.refreshToken.tokenType).to.be.a('string');
+            expect(response.data.data.refreshToken.tokenType).to.be.eq('Bearer');
+
+            expect(response.data.data.refreshToken.expiresAt).to.be.a('number');
+            expect(new Date(response.data.data.refreshToken.expiresAt * 1000)).to.be.a('date');
+
+            expect(response.data.data.refreshToken.notBefore).to.be.a('number');
+            expect(new Date(response.data.data.refreshToken.notBefore * 1000)).to.be.a('date');
         });
     });
 });
