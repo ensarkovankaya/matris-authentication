@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'mocha';
 import "reflect-metadata";
 import { IAuthToken } from '../../src/models/token.model';
 import { Server } from '../../src/server';
+import { RefreshTokenGenerator } from '../data/tokens/refresh.token.generator';
 import { Database } from '../data/valid/database';
 import { IDBUserModel } from '../data/valid/db.model';
 import { HttpClient } from './http.client';
@@ -127,6 +128,28 @@ describe('E2E', () => {
                 }
             }
         }).timeout(4000);
+    });
+
+    describe.only('Refresh', () => {
+        it('should refresh', async () => {
+            try {
+                const generator = new RefreshTokenGenerator(process.env.JWT_SECRET);
+
+                const token = await generator.one();
+
+                await client.refresh({
+                accessToken: token.accessToken,
+                refreshToken: token.refreshToken,
+                atExpiresIn: '1h',
+                rtExpiresIn: '2h'
+            });
+            } catch (e) {
+                console.log(e.response);
+                console.log('Status:', e.status);
+                console.log('Errors:' , e.data.errors);
+                throw e;
+            }
+        });
     });
 });
 
