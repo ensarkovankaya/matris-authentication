@@ -111,10 +111,10 @@ export class InvalidTokenResponse extends ErrorResponse {
     }
 }
 
-export class TokenNotExpiredResponse extends ErrorResponse {
+export class TokenNotBeforeResponse extends ErrorResponse {
     constructor(res: Response, param: string = 'token', location: Location = 'body') {
         super(res, [{
-            msg: 'TokenNotExpired',
+            msg: 'TokenNotBefore',
             location,
             param
         }]);
