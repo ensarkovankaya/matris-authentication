@@ -2,6 +2,7 @@ import * as bodyParser from "body-parser";
 import * as compression from "compression";
 import * as cors from "cors";
 import * as express from "express";
+import { NextFunction, Request, Response } from 'express';
 import * as expressValidator from 'express-validator';
 import * as helmet from "helmet";
 import { Logger } from "matris-logger";
@@ -9,6 +10,7 @@ import * as morgan from "morgan";
 import "reflect-metadata";
 import { Container } from 'typedi';
 import { rootLogger } from './logger';
+import { ServerErrorResponse } from './response';
 import { AuthenticationRoute } from './routes/authentication.route';
 
 export class Server {
@@ -20,6 +22,12 @@ export class Server {
         this.app = express();
         this.config();
         this.routes();
+        this.app.use(this.errorHandler.bind(this));
+    }
+
+    public errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
+        this.logger.error('Server Error', err);
+        return new ServerErrorResponse(res).send();
     }
 
     // application config
