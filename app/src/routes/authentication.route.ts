@@ -3,17 +3,16 @@ import { AccountService } from 'matris-account-api';
 import { UserSchema } from 'matris-account-api/dist/models/user';
 import { Logger } from 'matris-logger/dist/logger';
 import { Service } from 'typedi';
-import { EnvironmentError, InvalidData } from '../errors';
+import { EnvironmentError } from '../errors';
 import { rootLogger } from '../logger';
 import {
     InvalidPasswordResponse,
-    ServerErrorResponse,
     SuccessResponse,
     TokenExpiredResponse,
     UserNotActiveResponse,
     UserNotFoundResponse
 } from '../response';
-import { InvalidTokenResponse } from '../response';
+import { InvalidTokenResponse, TokenNotBeforeResponse } from '../response';
 import { AuthenticationService } from '../services/auth.service';
 import { RequestValidatorService } from '../services/request.validator.service';
 
@@ -57,28 +56,12 @@ export class AuthenticationRoute {
      */
     public async password(req: Request, res: Response) {
         // Get data from request
-        let data: {
+        const data = this.vl.data<{
             email: string;
             password: string;
-            atExpiresIn: number | string;
-            rtExpiresIn: number | string;
-        };
-        try {
-            data = this.vl.data<{
-                email: string;
-                password: string;
-                atExpiresIn: number;
-                rtExpiresIn: number;
-            }>(req, ['body']);
-            this.logger.debug('Data extracted from request.', {data});
-            if (!data || !data.email || !data.password ||
-                data.atExpiresIn === undefined || !data.rtExpiresIn === undefined) {
-                throw new InvalidData();
-            }
-        } catch (e) {
-            this.logger.error('Data extraction from request failed', e);
-            return new ServerErrorResponse(res).send();
-        }
+            atExpiresIn: number;
+            rtExpiresIn: number;
+        }>(req, ['body']);
 
         // Get user from AccountService
         let user: UserSchema;
@@ -87,7 +70,7 @@ export class AuthenticationRoute {
             this.logger.debug('User recived.', {user});
         } catch (e) {
             this.logger.error('Getting user from AccountService failed.', e);
-            return new ServerErrorResponse(res).send();
+            throw e;
         }
 
         // Check user exists and active
@@ -104,7 +87,7 @@ export class AuthenticationRoute {
             this.logger.debug('Password validated.', {valid});
         } catch (e) {
             this.logger.error('Checking password failed.', e);
-            return new ServerErrorResponse(res).send();
+            throw e;
         }
 
         // If password not valid return InvalidPasswordResponse
@@ -124,7 +107,7 @@ export class AuthenticationRoute {
             return new SuccessResponse(res, tokens).send();
         } catch (e) {
             this.logger.error('Signing user data failed.', e);
-            return new ServerErrorResponse(res).send();
+            throw e;
         }
     }
 
@@ -137,18 +120,7 @@ export class AuthenticationRoute {
      */
     public async validate(req: Request, res: Response) {
         // Get data from request
-        let data: {token: string};
-        try {
-            data = this.vl.data<{ token: string }>(req, ['body']);
-            this.logger.debug('Data extracted from request.', {data});
-
-            if (!data || !data.token) {
-                throw new InvalidData();
-            }
-        } catch (e) {
-            this.logger.error('Data extraction from request failed', e);
-            return new ServerErrorResponse(res).send();
-        }
+        const data = this.vl.data<{ token: string }>(req, ['body']);
 
         try {
             // Verify Token
@@ -164,7 +136,7 @@ export class AuthenticationRoute {
                 return new InvalidTokenResponse(res).send();
             }
             this.logger.error('Token decoding failed.', e);
-            return new ServerErrorResponse(res).send();
+            throw e;
         }
     }
 
@@ -175,27 +147,12 @@ export class AuthenticationRoute {
      */
     public async refresh(req: Request, res: Response) {
         // Get data from request
-        let data: {
+        const data = this.vl.data<{
             accessToken: string;
             refreshToken: string;
             atExpiresIn: number | string;
             rtExpiresIn: number | string;
-        };
-        try {
-            data = this.vl.data<{
-                accessToken: string;
-                refreshToken: string;
-                atExpiresIn: number | string;
-                rtExpiresIn: number | string;
-            }>(req, ['body']);
-            this.logger.debug('Data extracted from request.', {data});
-            if (!data || !data.accessToken || !data.refreshToken || !data.atExpiresIn || !data.rtExpiresIn) {
-                throw new InvalidData();
-            }
-        } catch (e) {
-            this.logger.error('Data extraction from request failed', e);
-            return new ServerErrorResponse(res).send();
-        }
+        }>(req, ['body']);
 
         try {
             // Refresh Token
@@ -214,9 +171,12 @@ export class AuthenticationRoute {
             } else if (e.name === 'JsonWebTokenError') {
                 this.logger.warn('Token invalid.', e);
                 return new InvalidTokenResponse(res).send();
+            } else if (e.name === 'NotBeforeError') {
+                this.logger.warn('Token not before.', e);
+                return new TokenNotBeforeResponse(res).send();
             }
             this.logger.error('Token decoding failed.', e);
-            return new ServerErrorResponse(res).send();
+            throw e;
         }
     }
 
@@ -253,7 +213,7 @@ export class AuthenticationRoute {
                     }
                 }),
                 this.vl.validate.bind(this.vl),
-                this.password.bind(this)
+                (req, res, next) => this.password(req, res).catch(err => next(err))
             );
 
             this.router.post('/verify',
@@ -264,7 +224,7 @@ export class AuthenticationRoute {
                     }
                 }),
                 this.vl.validate.bind(this.vl),
-                this.validate.bind(this)
+                (req, res, next) => this.validate(req, res).catch(err => next(err))
             );
 
             this.router.post('/refresh',
@@ -305,8 +265,9 @@ export class AuthenticationRoute {
                     }
                 }),
                 this.vl.validate.bind(this.vl),
-                this.validate.bind(this)
+                (req, res, next) => this.refresh(req, res).catch(err => next(err))
             );
+
         } catch (err) {
             this.logger.error('Route configuration failed.', err);
             throw err;
