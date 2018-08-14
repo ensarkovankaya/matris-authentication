@@ -179,13 +179,13 @@ export class AuthenticationRoute {
         } catch (e) {
             if (e.name === 'TokenExpiredError') {
                 this.logger.warn('Token expired.', e);
-                return new TokenExpiredResponse(res).send();
+                return new TokenExpiredResponse(res, 'refreshToken').send();
             } else if (e.name === 'JsonWebTokenError') {
                 this.logger.warn('Token invalid.', e);
-                return new InvalidTokenResponse(res).send();
+                return new InvalidTokenResponse(res, '').send();
             } else if (e.name === 'NotBeforeError') {
                 this.logger.warn('Token not before.', e);
-                return new TokenNotBeforeResponse(res).send();
+                return new TokenNotBeforeResponse(res, 'refreshToken').send();
             }
             this.logger.error('Token decoding failed.', e);
             throw e;
