@@ -178,6 +178,96 @@ describe('E2E', () => {
             expect(response.data.data.refreshToken.notBefore).to.be.a('number');
             expect(new Date(response.data.data.refreshToken.notBefore * 1000)).to.be.a('date');
         });
+
+        it('should response with TokenExpired', async () => {
+            try {
+                const generator = new TokenGenerator();
+
+                const tokens = await generator.authToken(
+                    process.env.JWT_SECRET, 0, 0,
+                    generator.db.one(u => u.active && !u.deleted)
+                );
+
+                await client.refresh<any>({
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    atExpiresIn: '1h',
+                    rtExpiresIn: '2h'
+                });
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('HttpClientError');
+                expect(e.status).to.be.eq(400);
+                expect(e.data).to.be.an('object');
+                expect(e.data).to.have.keys(['data', 'errors']);
+                expect(e.data.data).to.be.eq(null);
+                expect(e.data.errors).to.be.deep.eq([{
+                    msg: 'TokenExpired',
+                    location: 'body',
+                    param: 'refreshToken'
+                }]);
+            }
+        });
+
+        it('should response with InvalidToken', async () => {
+            try {
+                const generator = new TokenGenerator();
+
+                const tokens = await generator.authToken(
+                    'not-a-valid-secret', 0, 10,
+                    generator.db.one(u => u.active && !u.deleted)
+                );
+
+                await client.refresh<any>({
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    atExpiresIn: '1h',
+                    rtExpiresIn: '2h'
+                });
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('HttpClientError');
+                expect(e.status).to.be.eq(400);
+                expect(e.data).to.be.an('object');
+                expect(e.data).to.have.keys(['data', 'errors']);
+                expect(e.data.data).to.be.eq(null);
+                expect(e.data.errors).to.be.deep.eq([{
+                    msg: 'InvalidToken',
+                    location: 'body',
+                    param: ''
+                }]);
+            }
+        });
+
+        it('should response with TokenNotBefore', async () => {
+            try {
+                const generator = new TokenGenerator();
+
+                const tokens = await generator.authToken(
+                    process.env.JWT_SECRET, 10, 10,
+                    generator.db.one(u => u.active && !u.deleted)
+                );
+
+                await client.refresh<any>({
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    atExpiresIn: '1h',
+                    rtExpiresIn: '2h'
+                });
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('HttpClientError');
+                expect(e.status).to.be.eq(400);
+                expect(e.data).to.be.an('object');
+                expect(e.data).to.have.keys(['data', 'errors']);
+                expect(e.data.data).to.be.eq(null);
+                expect(e.data.errors).to.be.deep.eq([{
+                    msg: 'TokenNotBefore',
+                    location: 'body',
+                    param: 'refreshToken'
+                }]);
+            }
+        });
     });
 });
 
