@@ -830,7 +830,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                     {
                         msg: 'TokenExpired',
                         location: 'body',
-                        param: 'token'
+                        param: 'refreshToken'
                     }
                 ]
             });
@@ -871,7 +871,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
                     {
                         msg: 'InvalidToken',
                         location: 'body',
-                        param: 'token'
+                        param: ''
                     }
                 ]
             });
