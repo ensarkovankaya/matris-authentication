@@ -537,7 +537,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
         });
     });
 
-    describe('Validate', () => {
+    describe('Verify', () => {
         it('should call "data" method from RequestValidator', async () => {
 
             class RequestValidator extends MockRequestValidatorService {
@@ -555,7 +555,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const response = new MockResponse();
             const request = new MockRequest();
             try {
-                await route.validate(request as any, response as any);
+                await route.verify(request as any, response as any);
                 throw new ShouldNotSucceed();
             } catch (e) {
                 expect(e.name).to.be.eq('MethodCalled');
@@ -575,7 +575,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const response = new MockResponse();
 
             try {
-                await route.validate(new MockRequest() as any, response as any);
+                await route.verify(new MockRequest() as any, response as any);
                 throw new ShouldNotSucceed();
             } catch (e) {
                 expect(e.name).to.be.eq('InvalidData');
@@ -603,7 +603,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const request = new MockRequest({token: 'jwt-token'});
 
             try {
-                await route.validate(request as any, response as any);
+                await route.verify(request as any, response as any);
                 throw new ShouldNotSucceed();
             } catch (e) {
                 expect(e.name).to.be.eq('MethodCalled');
@@ -636,7 +636,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
             const response = new MockResponse();
             const request = new MockRequest({token: 'jwt-token'});
-            await route.validate(request as any, response as any);
+            await route.verify(request as any, response as any);
 
             expect(response.sended).to.be.eq(true);
             expect(response._status).to.be.eq(400);
@@ -672,7 +672,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
 
             const response = new MockResponse();
             const request = new MockRequest({token: 'jwt-token'});
-            await route.validate(request as any, response as any);
+            await route.verify(request as any, response as any);
 
             expect(response.sended).to.be.eq(true);
             expect(response._status).to.be.eq(400);
@@ -706,7 +706,7 @@ describe('Unit -> Routes -> AuthenticationRoute', () => {
             const response = new MockResponse();
             const request = new MockRequest({token: 'jwt-token'});
 
-            await route.validate(request as any, response as any);
+            await route.verify(request as any, response as any);
 
             expect(response.sended).to.be.eq(true);
             expect(response._status).to.be.eq(200);

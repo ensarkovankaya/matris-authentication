@@ -122,7 +122,7 @@ export class AuthenticationRoute {
      * @param {Request} req
      * @param {Response} res
      */
-    public async validate(req: Request, res: Response) {
+    public async verify(req: Request, res: Response) {
         // Get data from request
         const data = this.vl.data<{ token: string }>(req, ['body']);
 
@@ -236,7 +236,7 @@ export class AuthenticationRoute {
                     }
                 }),
                 this.vl.validate.bind(this.vl),
-                (req, res, next) => this.validate(req, res).catch(err => next(err))
+                (req, res, next) => this.verify(req, res).catch(err => next(err))
             );
 
             this.router.post('/refresh',
