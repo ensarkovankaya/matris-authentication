@@ -42,21 +42,21 @@ export class AuthenticationService {
      * Authenticate users and generate access and refresh token
      * @param {string} id: User id
      * @param {Role} role: User role
-     * @param {number | string} accessTokenExpiresIn: Access token life time
-     * @param {number | string} refreshTokenExpiresIn: Refresh token life time
+     * @param {number | string} atExpiresIn: Access token life time
+     * @param {number | string} rtExpiresIn: Refresh token life time
      * @param {any} data: Aditional data
      */
-    public async authenticate(id: string, role: Role, accessTokenExpiresIn: number | string,
-                              refreshTokenExpiresIn: number | string, data?: any): Promise<IAuthToken> {
-        this.logger.debug('Genareting auth tokens', {id, role, accessTokenExpiresIn, refreshTokenExpiresIn});
+    public async authenticate(id: string, role: Role, atExpiresIn: number | string,
+                              rtExpiresIn: number | string, data?: any): Promise<IAuthToken> {
+        this.logger.debug('Genareting auth tokens', {id, role, atExpiresIn, rtExpiresIn});
         try {
             // Generate jit for access token
             const jit =  this.generateID(24);
 
             // Create access and refresh tokens
             const [accessToken, refreshToken] = await Promise.all([
-                this.generateAccessToken(jit, id, role, accessTokenExpiresIn, data),
-                this.generateRefreshToken(jit, accessTokenExpiresIn, refreshTokenExpiresIn)
+                this.generateAccessToken(jit, id, role, atExpiresIn, data),
+                this.generateRefreshToken(jit, atExpiresIn, rtExpiresIn)
             ]);
 
             // Decode tokens for extracting payload exp and nbf
@@ -186,7 +186,7 @@ export class AuthenticationService {
      * @returns {Promise<T>} decoded token
      */
     public async verify<T>(token: string, options: VerifyOptions = {}): Promise<T> {
-        this.logger.debug('Verifing token', {token});
+        this.logger.debug('Verifing token', {token, options});
         if (!this.secret) {
             throw new SecretUndefined();
         }
@@ -207,7 +207,7 @@ export class AuthenticationService {
      * @returns {Promise<T>}
      */
     public async decode<T>(token: string, overwrite: DecodeOptions = {}): Promise<T> {
-        this.logger.debug('Decodeding token', {token});
+        this.logger.debug('Decodeding token', {token, overwrite});
         try {
             return await new Promise<T>((resolve, reject) => {
                 try {
