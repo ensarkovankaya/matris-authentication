@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { createServer, Server as HttpServer } from 'http';
 import { after, before, describe, it } from 'mocha';
 import "reflect-metadata";
-import { IAuthToken } from '../../src/models/token.model';
+import { IAccessTokenPayload, IAuthToken, IRefreshTokenPayload } from '../../src/models/token.model';
 import { Server } from '../../src/server';
 import { TokenGenerator } from '../data/token/generator';
 import { Database } from '../data/valid/database';
@@ -265,6 +265,88 @@ describe('E2E', () => {
                     msg: 'TokenNotBefore',
                     location: 'body',
                     param: 'refreshToken'
+                }]);
+            }
+        });
+    });
+
+    describe('Verify', () => {
+        it('should return decoded token for access token', async () => {
+            const generator = new TokenGenerator();
+
+            const tokens = await generator.authToken(
+                process.env.JWT_SECRET, 10, 10,
+                generator.db.one(u => u.active && !u.deleted)
+            );
+
+            const response = await client.verify<{data: IAccessTokenPayload}>({token: tokens.accessToken});
+            expect(response.status).to.be.eq(200);
+            expect(response.data).to.be.an('object');
+            expect(response.data.data).to.be.an('object');
+            expect(response.data.data).to.be.deep.eq(tokens.atDecoded);
+        });
+
+        it('should return decoded token for refresh token', async () => {
+            const generator = new TokenGenerator();
+
+            const tokens = await generator.authToken(
+                process.env.JWT_SECRET, 0, 10,
+                generator.db.one(u => u.active && !u.deleted)
+            );
+
+            const response = await client.verify<{data: IRefreshTokenPayload}>({token: tokens.refreshToken});
+            expect(response.status).to.be.eq(200);
+            expect(response.data).to.be.an('object');
+            expect(response.data.data).to.be.an('object');
+            expect(response.data.data).to.be.deep.eq(tokens.rtDecoded);
+        });
+
+        it('should response with TokenExpired', async () => {
+            const generator = new TokenGenerator();
+
+            const tokens = await generator.authToken(
+                process.env.JWT_SECRET, 0, 0,
+                generator.db.one(u => u.active && !u.deleted)
+            );
+
+            try {
+                await client.verify<any>({token: tokens.accessToken});
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('HttpClientError');
+                expect(e.status).to.be.eq(400);
+                expect(e.data).to.be.an('object');
+                expect(e.data).to.have.keys(['data', 'errors']);
+                expect(e.data.data).to.be.eq(null);
+                expect(e.data.errors).to.be.deep.eq([{
+                    msg: 'TokenExpired',
+                    location: 'body',
+                    param: 'token'
+                }]);
+            }
+        });
+
+        it('should response with InvalidToken', async () => {
+            const generator = new TokenGenerator();
+
+            const tokens = await generator.authToken(
+                'not-a-valid-secret', 10, 10,
+                generator.db.one(u => u.active && !u.deleted)
+            );
+
+            try {
+                await client.verify<any>({token: tokens.accessToken});
+                throw new ShouldNotSucceed();
+            } catch (e) {
+                expect(e.name).to.be.eq('HttpClientError');
+                expect(e.status).to.be.eq(400);
+                expect(e.data).to.be.an('object');
+                expect(e.data).to.have.keys(['data', 'errors']);
+                expect(e.data.data).to.be.eq(null);
+                expect(e.data.errors).to.be.deep.eq([{
+                    msg: 'InvalidToken',
+                    location: 'body',
+                    param: 'token'
                 }]);
             }
         });
