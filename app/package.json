@@ -12,8 +12,9 @@
     "check": "tslint -p tslint.json",
     "build": "npm run check && tsc",
     "build:clean": "rm -rf ./build/* && npm run build",
-    "start": "node ./build/index.js",
-    "watch": "nodemon -e ts -w src/ -i test/ --exec 'ts-node src/index.ts'"
+    "start:prod": "node ./build/index.js",
+    "start:test": "nodemon -e ts -w src/ -i test/ --exec 'ts-node test/server/index.ts'",
+    "start:dev": "nodemon -e ts -w src/ -i test/ --exec 'ts-node src/index.ts'"
   },
   "dependencies": {
     "body-parser": "^1.18.3",
