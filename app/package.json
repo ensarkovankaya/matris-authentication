@@ -1,6 +1,6 @@
 {
   "name": "authentication",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Authentication API",
   "main": "index.js",
   "author": "Ensar Kovankaya <ensar@kovankaya.com>",
